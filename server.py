@@ -6,7 +6,8 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+
 import uvicorn
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
