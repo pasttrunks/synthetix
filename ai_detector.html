@@ -370,14 +370,13 @@
             border-radius: 2px;
         }
 
-        .hl-human {
-            background: rgba(16, 185, 129, 0.12);
-            color: #a7f3d0;
-            border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+        .hl-neutral {
+            background: transparent;
+            color: var(--text-body);
             padding: 0 3px;
-            border-radius: 2px;
         }
     </style>
+
 </head>
 <body>
 
@@ -615,7 +614,7 @@
         if (sentences && Array.isArray(sentences)) {
             sentences.forEach(item => {
                 const span = document.createElement('span');
-                span.className = item.is_suspicious ? 'hl-ai' : 'hl-human';
+                span.className = item.is_suspicious ? 'hl-ai' : 'hl-neutral';
                 span.textContent = item.sentence + ' ';
                 map.appendChild(span);
             });
@@ -623,6 +622,7 @@
             map.innerHTML = '<em>Sentence classification unavailable...</em>';
         }
     }
+
 
     checkHealth();
     setInterval(checkHealth, 5000);

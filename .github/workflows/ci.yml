@@ -32,4 +32,8 @@ jobs:
 
       - name: Validate benchmark corpus schema
         run: |
-          python benchmark/evaluate.py --corpus benchmark/corpus/sample_corpus.jsonl --dry-run
+          python benchmark/evaluate.py --corpus benchmark/corpus/essay_corpus.jsonl --dry-run
+
+      - name: Run quality gate check
+        run: |
+          python benchmark/gate.py --report benchmark/reports/report_latest.json

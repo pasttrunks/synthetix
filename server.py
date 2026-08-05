@@ -199,7 +199,7 @@ def health():
         "deberta_loaded": MODEL_LOADED,
         "ollama_active": ollama_ok,
         "ollama_model": OLLAMA_MODEL if ollama_ok else None,
-        "active_engine": f"DeBERTa-v3 Transformer ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
+        "active_engine": f"RoBERTa-base Classifier ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
     }
 
 @app.post("/api/analyze", response_model=AnalysisResult)
@@ -212,7 +212,8 @@ def analyze(payload: TextPayload):
         raise HTTPException(status_code=400, detail="Text payload cannot be empty.")
 
     ollama_ok = check_ollama_alive()
-    active_model_desc = f"DeBERTa-v3 Transformer ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
+    active_model_desc = f"RoBERTa-base Classifier ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
+
 
     if len(raw_text) < MIN_TEXT_LENGTH:
         return AnalysisResult(
@@ -332,12 +333,13 @@ def analyze(payload: TextPayload):
                 overall_score = 0.0
 
             text_coverage = round((len(words_covered_indices) / total_words) * 100.0, 1) if total_words > 0 else 100.0
-            method_desc = f"DeBERTa-v3 Transformer ({len(chunk_scores)} Chunks, Weighted Avg)"
+            method_desc = f"RoBERTa-base Classifier ({len(chunk_scores)} Chunks, Weighted Avg)"
     else:
         overall_score = None
         method_desc = "unavailable"
         chunk_scores = []
         text_coverage = None
+
 
     return AnalysisResult(
         overall_ai_score=overall_score,
@@ -353,7 +355,11 @@ def analyze(payload: TextPayload):
         language_warning=lang_warning
     )
 
-if __name__ == "__main__":
+def main():
     print("Starting Synthetix AI Detector Engine on http://localhost:8000...")
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
+if __name__ == "__main__":
+    main()
+
 

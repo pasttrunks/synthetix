@@ -1,19 +1,21 @@
-# Synthetix AI Detector Engine
+# Synthetix AI Text Detection Engine
 
-Production-oriented AI text detection engine built on DeBERTa-v3 sequence classification, probability calibration, and metric analysis.
+Research prototype for AI text detection built on sequence classification, metric analysis, and score calibration benchmarking.
 
-> [!IMPORTANT]
-> **Production Guidance & Usage Limitations**
+> [!WARNING]
+> **Experimental Research Prototype**
 >
-> AI detection probabilities are statistical estimations. Scores must be evaluated alongside domain-specific benchmark calibration (ECE <= 5%) before being relied upon for automated decision workflows.
+> Synthetix is an exploratory research prototype. Raw detection scores represent uncalibrated baseline outputs from the `Hello-SimpleAI/chatgpt-detector-roberta` sequence classifier.
+>
+> **Do not use for adverse actions**, including academic grading, disciplinary accusations, hiring evaluations, or publishing decisions.
 
 ## Features
 
-- **DeBERTa-v3 Classification**: Modern transformer fine-tuned on GPT-4, Claude 3, Llama 3, and Mistral outputs.
+- **RoBERTa Sequence Classification**: Baseline model using `Hello-SimpleAI/chatgpt-detector-roberta` fine-tuned on HC3 question-answer pairs.
 - **Metric Analysis**: Computes sentence burstiness (CV) and predictability indices.
-- **Score Calibration**: Evaluates Expected Calibration Error (ECE) and reliability diagrams.
+- **Score Calibration Framework**: Measures Expected Calibration Error (ECE) and plots reliability diagrams.
 - **FastAPI Engine**: Standardized REST endpoints (`/api/analyze`, `/health`).
-- **Interactive UI**: Web interface for sentence breakdown and probability visualization.
+- **Interactive Web Interface**: Single-page UI with sentence breakdown and neutral highlighting.
 
 ## Quick Start
 
@@ -26,9 +28,9 @@ Production-oriented AI text detection engine built on DeBERTa-v3 sequence classi
    ```bash
    python server.py
    ```
-   Or using Uvicorn:
+   Or run the CLI command:
    ```bash
-   uvicorn server:app --host 127.0.0.1 --port 8000
+   synthetix-serve
    ```
 
 3. Health Check:
@@ -41,16 +43,16 @@ Production-oriented AI text detection engine built on DeBERTa-v3 sequence classi
 
 ## Benchmark & Calibration
 
-Validate accuracy and score calibration against JSONL datasets:
+Validate corpus schema and baseline evaluation metrics:
 
 ```bash
 # Validate corpus schema
-python benchmark/evaluate.py --corpus benchmark/corpus/sample_corpus.jsonl --dry-run
+python benchmark/evaluate.py --corpus benchmark/corpus/essay_corpus.jsonl --dry-run
 
-# Run full evaluation
-python benchmark/evaluate.py --corpus benchmark/corpus/sample_corpus.jsonl --api-url http://localhost:8000/api/analyze
+# Run full evaluation against local server
+python benchmark/evaluate.py --corpus benchmark/corpus/essay_corpus.jsonl --api-url http://localhost:8000/api/analyze
 
-# Generate calibration reliability plot
+# Generate calibration plot
 python benchmark/calibration.py --report benchmark/reports/report_latest.json
 ```
 
@@ -58,7 +60,7 @@ python benchmark/calibration.py --report benchmark/reports/report_latest.json
 
 Run unit tests:
 ```bash
-pytest
+pytest tests/
 ```
 
 ## License
