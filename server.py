@@ -3,14 +3,15 @@ import re
 import math
 import requests
 import numpy as np
-from fastapi import FastAPI, HTTPException, UploadFile, File
+import asyncio
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 from synthetix.ingest import extract_text_from_bytes, filter_qualifying_prose
 from synthetix.report_exporter import generate_html_review_report
-
 
 import uvicorn
 import torch
@@ -19,7 +20,62 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HTML_PATH = os.path.join(BASE_DIR, "ai_detector.html")
 
-app = FastAPI(title="Synthetix AI Detection Engine")
+MODEL_LOADED = False
+tokenizer = None
+model = None
+AI_LABEL_INDEX = 1
+MODEL_NAME = "Hello-SimpleAI/chatgpt-detector-roberta"
+MODEL_REVISION = "main"
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "llama3:latest"
+MIN_TEXT_LENGTH = 150
+CHUNK_SIZE = 400
+CHUNK_OVERLAP = 50
+CONCURRENCY_SEMAPHORE = asyncio.Semaphore(5)
+
+def get_ai_label_index(model_config) -> int:
+    if hasattr(model_config, "id2label") and model_config.id2label:
+        for idx, label in model_config.id2label.items():
+            label_lower = str(label).lower()
+            if any(term in label_lower for term in ["chatgpt", "fake", "ai", "generated", "synthetic", "label_1"]):
+                return int(idx)
+        for idx, label in model_config.id2label.items():
+            label_lower = str(label).lower()
+            if any(term in label_lower for term in ["real", "human", "label_0"]):
+                return 1 if int(idx) == 0 else 0
+    return 0
+
+def load_model_artifacts():
+    global tokenizer, model, MODEL_LOADED, AI_LABEL_INDEX
+    print(f"Loading RoBERTa AI detector model: {MODEL_NAME} (revision: {MODEL_REVISION})...")
+    try:
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, local_files_only=True)
+            model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, local_files_only=True)
+            loaded_from_cache = True
+        except Exception:
+            tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, local_files_only=False)
+            model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, local_files_only=False)
+            loaded_from_cache = False
+
+        model.eval()
+        MODEL_LOADED = True
+        AI_LABEL_INDEX = get_ai_label_index(model.config)
+        source_str = "local cache" if loaded_from_cache else "remote download"
+        print(f"RoBERTa AI detector model successfully loaded from {source_str}! AI label index: {AI_LABEL_INDEX}")
+    except Exception as e:
+        print(f"Startup warning: Could not load RoBERTa model ({MODEL_NAME}): {e}")
+        MODEL_LOADED = False
+
+load_model_artifacts()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not MODEL_LOADED:
+        load_model_artifacts()
+    yield
+
+app = FastAPI(title="Synthetix AI Detection Engine", lifespan=lifespan)
 
 @app.get("/")
 def serve_index():
@@ -35,55 +91,18 @@ def health_check():
         "model_name": MODEL_NAME if MODEL_LOADED else "None"
     }
 
+@app.get("/health/liveness")
+def liveness_probe():
+    return {"status": "alive"}
 
-MODEL_NAME = "Hello-SimpleAI/chatgpt-detector-roberta"
-MODEL_REVISION = "main"
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3:latest"
-MIN_TEXT_LENGTH = 150
-CHUNK_SIZE = 400
-CHUNK_OVERLAP = 50
-
-print(f"Loading RoBERTa AI detector model: {MODEL_NAME} (revision: {MODEL_REVISION})...")
-
-def get_ai_label_index(model_config) -> int:
-    if hasattr(model_config, "id2label") and model_config.id2label:
-        # First pass: check all labels for explicit AI / ChatGPT terms or label_1
-        for idx, label in model_config.id2label.items():
-            label_lower = str(label).lower()
-            if any(term in label_lower for term in ["chatgpt", "fake", "ai", "generated", "synthetic", "label_1"]):
-                return int(idx)
-        # Second pass: fall back to human-opposite logic if no explicit AI label is found
-        for idx, label in model_config.id2label.items():
-            label_lower = str(label).lower()
-            if any(term in label_lower for term in ["real", "human", "label_0"]):
-                return 1 if int(idx) == 0 else 0
-    return 0
-
-AI_LABEL_INDEX = 1
-
-
-try:
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, local_files_only=True)
-        model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, local_files_only=True)
-        loaded_from_cache = True
-    except Exception:
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, local_files_only=False)
-        model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, local_files_only=False)
-        loaded_from_cache = False
-
-    model.eval()
-    MODEL_LOADED = True
-    AI_LABEL_INDEX = get_ai_label_index(model.config)
-    source_str = "local cache" if loaded_from_cache else "remote download"
-    print(f"RoBERTa AI detector model successfully loaded from {source_str}! AI label index: {AI_LABEL_INDEX}")
-except Exception as e:
-    print(f"Offline startup check error: Could not load RoBERTa model ({MODEL_NAME} @ {MODEL_REVISION}): {e}")
-    MODEL_LOADED = False
-
+@app.get("/health/readiness")
+def readiness_probe():
+    if MODEL_LOADED:
+        return {"status": "ready", "model_name": MODEL_NAME}
+    raise HTTPException(status_code=503, detail="Model artifacts not ready.")
 
 AI_PHRASES = [
+
     "in conclusion", "furthermore", "moreover", "it is important to note",
     "delve", "plethora", "crucial role", "seamless", "foster",
     "in today's digital world", "tapestry", "testament", "vibrant",
