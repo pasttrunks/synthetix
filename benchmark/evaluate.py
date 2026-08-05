@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Synthetix AI Detector Benchmark Evaluation Script
-Loads JSONL benchmark corpus, evaluates against local API, computes performance metrics,
+Loads JSONL benchmark corpus, evaluates against local API, computes performance metrics
+(with 95% bootstrap confidence intervals, abstention tracking, and corpus provenance),
 and saves timestamped report JSON.
 """
 
@@ -9,20 +10,40 @@ import os
 import sys
 import json
 import argparse
+import subprocess
+import hashlib
 import time
 from datetime import datetime, timezone
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple, Optional
 import requests
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score, brier_score_loss, roc_curve, confusion_matrix
 
+def compute_corpus_hash(corpus_path: str) -> str:
+    """Compute SHA256 hash of corpus file for provenance tracking."""
+    sha = hashlib.sha256()
+    with open(corpus_path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            sha.update(chunk)
+    return sha.hexdigest()
+
+def get_git_commit_hash() -> str:
+    """Retrieve current Git commit SHA."""
+    try:
+        res = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
+        return res.stdout.strip()
+    except Exception:
+        return "unknown"
+
 def validate_sample(sample: Dict[str, Any], line_num: int) -> bool:
-    required_fields = ["text", "label", "source", "domain", "model_family", "word_count", "language"]
+    required_fields = ["text", "label"]
     missing = [field for field in required_fields if field not in sample]
     if missing:
         raise ValueError(f"Line {line_num}: Missing required fields: {missing}")
-    if sample["label"] not in ["human", "ai"]:
-        raise ValueError(f"Line {line_num}: Invalid label '{sample['label']}' (must be 'human' or 'ai')")
+    
+    raw_label = str(sample["label"]).lower()
+    if raw_label not in ["human", "ai", "0", "1"]:
+        raise ValueError(f"Line {line_num}: Invalid label '{sample['label']}'")
     if not isinstance(sample["text"], str) or not sample["text"].strip():
         raise ValueError(f"Line {line_num}: 'text' must be a non-empty string")
     return True
@@ -52,6 +73,44 @@ def compute_tpr_at_fpr(y_true: np.ndarray, y_prob: np.ndarray, target_fpr: float
     if len(valid_tprs) > 0:
         return float(np.max(valid_tprs))
     return 0.0
+
+def compute_bootstrap_ci(y_true: np.ndarray, y_prob: np.ndarray, n_bootstraps: int = 200, confidence: float = 0.95) -> Dict[str, Tuple[Optional[float], Optional[float]]]:
+    """Compute 95% bootstrap confidence intervals for key metrics."""
+    if len(y_true) < 10 or len(np.unique(y_true)) < 2:
+        return {
+            "auroc_ci": (None, None),
+            "auprc_ci": (None, None),
+            "ece_ci": (None, None)
+        }
+
+    aurocs, auprcs, eces = [], [], []
+    n = len(y_true)
+    rng = np.random.RandomState(42)
+
+    for _ in range(n_bootstraps):
+        indices = rng.choice(n, size=n, replace=True)
+        yt_b, yp_b = y_true[indices], y_prob[indices]
+        if len(np.unique(yt_b)) >= 2:
+            aurocs.append(roc_auc_score(yt_b, yp_b))
+            auprcs.append(average_precision_score(yt_b, yp_b))
+            eces.append(compute_ece(yt_b, yp_b))
+
+    alpha = (1.0 - confidence) / 2.0
+    
+    def get_bounds(arr):
+        if len(arr) < 20:
+            return None, None
+        return float(np.percentile(arr, alpha * 100.0)), float(np.percentile(arr, (1.0 - alpha) * 100.0))
+
+    auroc_low, auroc_high = get_bounds(aurocs)
+    auprc_low, auprc_high = get_bounds(auprcs)
+    ece_low, ece_high = get_bounds(eces)
+
+    return {
+        "auroc_ci": (round(auroc_low, 4) if auroc_low is not None else None, round(auroc_high, 4) if auroc_high is not None else None),
+        "auprc_ci": (round(auprc_low, 4) if auprc_low is not None else None, round(auprc_high, 4) if auprc_high is not None else None),
+        "ece_ci": (round(ece_low, 4) if ece_low is not None else None, round(ece_high, 4) if ece_high is not None else None)
+    }
 
 def compute_metrics(y_true: List[int], y_prob: List[float], threshold: float = 0.5) -> Dict[str, Any]:
     y_true_arr = np.array(y_true, dtype=int)
@@ -83,25 +142,28 @@ def compute_metrics(y_true: List[int], y_prob: List[float], threshold: float = 0
     f1 = float(2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
 
     if len(np.unique(y_true_arr)) >= 2:
-        auroc = float(roc_auc_score(y_true_arr, y_prob_arr))
-        auprc = float(average_precision_score(y_true_arr, y_prob_arr))
+        auroc = round(float(roc_auc_score(y_true_arr, y_prob_arr)), 4)
+        auprc = round(float(average_precision_score(y_true_arr, y_prob_arr)), 4)
     else:
-        auroc = 0.0
-        auprc = 0.0
+        auroc = None
+        auprc = None
 
-    brier = float(brier_score_loss(y_true_arr, y_prob_arr))
-    ece = compute_ece(y_true_arr, y_prob_arr, n_bins=10)
-    tpr_at_01_fpr = compute_tpr_at_fpr(y_true_arr, y_prob_arr, target_fpr=0.001)
-    tpr_at_1_fpr = compute_tpr_at_fpr(y_true_arr, y_prob_arr, target_fpr=0.01)
+    brier = round(float(brier_score_loss(y_true_arr, y_prob_arr)), 4)
+    ece = round(compute_ece(y_true_arr, y_prob_arr, n_bins=10), 4)
+    tpr_at_01_fpr = round(compute_tpr_at_fpr(y_true_arr, y_prob_arr, target_fpr=0.001), 4)
+    tpr_at_1_fpr = round(compute_tpr_at_fpr(y_true_arr, y_prob_arr, target_fpr=0.01), 4)
+
+    ci_bounds = compute_bootstrap_ci(y_true_arr, y_prob_arr)
 
     return {
         "n_samples": n_samples,
-        "auroc": round(auroc, 4),
-        "auprc": round(auprc, 4),
-        "brier_score": round(brier, 4),
-        "ece": round(ece, 4),
-        "tpr_at_0_1_fpr": round(tpr_at_01_fpr, 4),
-        "tpr_at_1_fpr": round(tpr_at_1_fpr, 4),
+        "auroc": auroc,
+        "auprc": auprc,
+        "brier_score": brier,
+        "ece": ece,
+        "tpr_at_0_1_fpr": tpr_at_01_fpr,
+        "tpr_at_1_fpr": tpr_at_1_fpr,
+        "bootstrap_ci_95": ci_bounds,
         "confusion_matrix": {
             "tp": tp, "fp": fp, "tn": tn, "fn": fn,
             "precision": round(precision, 4),
@@ -112,52 +174,9 @@ def compute_metrics(y_true: List[int], y_prob: List[float], threshold: float = 0
         }
     }
 
-def print_summary_table(report: Dict[str, Any]):
-    print("\n" + "=" * 70)
-    print("           SYNTHETIX AI DETECTOR BENCHMARK SUMMARY")
-    print("=" * 70)
-    print(f"Timestamp:         {report['timestamp']}")
-    print(f"Corpus Path:       {report['corpus_path']}")
-    print(f"Total Samples:     {report['total_samples']} (Evaluated: {report['eval_samples']}, Errors: {report['error_samples']})")
-    print(f"Threshold:         {report['threshold']}")
-    print("-" * 70)
-    
-    m = report["overall_metrics"]
-    if m.get("n_samples", 0) > 0:
-        cm = m["confusion_matrix"]
-        print("OVERALL METRICS:")
-        print(f"  AUROC:            {m['auroc']:.4f}")
-        print(f"  AUPRC:            {m['auprc']:.4f}")
-        print(f"  Brier Score:      {m['brier_score']:.4f}")
-        print(f"  ECE (10 bins):    {m['ece']:.4f}")
-        print(f"  TPR @ 0.1% FPR:   {m['tpr_at_0_1_fpr']:.4f}")
-        print(f"  TPR @ 1.0% FPR:   {m['tpr_at_1_fpr']:.4f}")
-        print(f"  Accuracy:         {cm['accuracy']:.4f} (TP:{cm['tp']} FP:{cm['fp']} TN:{cm['tn']} FN:{cm['fn']})")
-        print(f"  Precision / Rec:  {cm['precision']:.4f} / {cm['recall']:.4f} (F1: {cm['f1']:.4f})")
-        print(f"  Overall FPR:      {cm['fpr']:.4f}")
-    else:
-        print("No valid evaluation samples recorded.")
-
-    print("\nPER-DOMAIN BREAKDOWN:")
-    print(f"{'Domain':<12} | {'Count':<6} | {'AUROC':<7} | {'ECE':<7} | {'TPR@1%FPR':<9} | {'FPR':<7}")
-    print("-" * 60)
-    for domain, d_m in report.get("per_domain", {}).items():
-        if d_m.get("n_samples", 0) > 0:
-            cm = d_m["confusion_matrix"]
-            print(f"{domain:<12} | {d_m['n_samples']:<6} | {d_m['auroc']:<7.4f} | {d_m['ece']:<7.4f} | {d_m['tpr_at_1_fpr']:<9.4f} | {cm['fpr']:<7.4f}")
-
-    print("\nPER-MODEL-FAMILY BREAKDOWN:")
-    print(f"{'Model Family':<14} | {'Count':<6} | {'AUROC':<7} | {'ECE':<7} | {'TPR@1%FPR':<9} | {'FPR':<7}")
-    print("-" * 62)
-    for mf, mf_m in report.get("per_model_family", {}).items():
-        if mf_m.get("n_samples", 0) > 0:
-            cm = mf_m["confusion_matrix"]
-            print(f"{mf:<14} | {mf_m['n_samples']:<6} | {mf_m['auroc']:<7.4f} | {mf_m['ece']:<7.4f} | {mf_m['tpr_at_1_fpr']:<9.4f} | {cm['fpr']:<7.4f}")
-    print("=" * 70 + "\n")
-
 def main():
     parser = argparse.ArgumentParser(description="Synthetix AI Detector Benchmark Evaluation Script")
-    parser.add_argument("--corpus", type=str, default="benchmark/corpus/sample_corpus.jsonl", help="Path to benchmark JSONL corpus file")
+    parser.add_argument("--corpus", type=str, default="benchmark/corpus/essay_corpus.jsonl", help="Path to benchmark JSONL corpus file")
     parser.add_argument("--api-url", type=str, default="http://localhost:8000/api/analyze", help="Synthetix API analyze endpoint URL")
     parser.add_argument("--threshold", type=float, default=0.5, help="Classification decision threshold (0.0 - 1.0)")
     parser.add_argument("--output-dir", type=str, default="benchmark/reports", help="Directory to save JSON evaluation report")
@@ -190,8 +209,11 @@ def main():
         print("\n[DRY RUN MODE] Corpus structure validation PASSED. No API calls performed.")
         sys.exit(0)
 
-    # Evaluate samples via API
+    corpus_sha256 = compute_corpus_hash(args.corpus)
+    git_commit_sha = get_git_commit_hash()
+
     results = []
+    abstained_count = 0
     error_count = 0
 
     print(f"Evaluating {len(samples)} samples against Synthetix API at {args.api_url}...")
@@ -203,89 +225,84 @@ def main():
             if res.status_code == 200:
                 res_data = res.json()
                 raw_score = res_data.get("overall_ai_score")
+                
+                raw_label = str(sample["label"]).lower()
+                y_true = 1 if raw_label in ("ai", "1", "chatgpt") else 0
+
                 if raw_score is None:
-                    y_prob = 0.0
+                    abstained_count += 1
+                    y_prob = None
                 else:
                     y_prob = float(raw_score) / 100.0
-                
-                y_true = 1 if sample["label"] == "ai" else 0
+
                 results.append({
                     "sample_index": idx,
+                    "sample_id": sample.get("sample_id", f"sample_{idx}"),
+                    "source_group_id": sample.get("source_group_id", sample.get("domain", "default")),
                     "text_snippet": sample["text"][:80],
                     "label": sample["label"],
                     "y_true": y_true,
                     "y_prob": y_prob,
-                    "domain": sample["domain"],
-                    "model_family": sample["model_family"],
-                    "source": sample["source"],
+                    "domain": sample.get("domain", "general"),
+                    "model_family": sample.get("model_family", sample.get("source", "unknown")),
                     "raw_api_response": res_data
                 })
             else:
-                print(f"Warning: Sample {idx} API request failed with HTTP {res.status_code}: {res.text[:100]}")
                 error_count += 1
         except Exception as e:
-            print(f"Warning: Sample {idx} API request failed with exception: {e}")
             error_count += 1
 
-    eval_count = len(results)
-    print(f"Completed evaluation: {eval_count} successful, {error_count} errors.")
+    valid_results = [r for r in results if r["y_prob"] is not None]
+    coverage_rate = round((len(valid_results) / len(samples)) * 100.0, 2) if len(samples) > 0 else 0.0
 
-    y_true_all = [r["y_true"] for r in results]
-    y_prob_all = [r["y_prob"] for r in results]
+    print(f"Completed evaluation: {len(valid_results)} analyzed, {abstained_count} abstained, {error_count} errors.")
+    print(f"Coverage Rate: {coverage_rate}%")
 
-    overall_metrics = compute_metrics(y_true_all, y_prob_all, threshold=args.threshold)
+    y_true_eval = [r["y_true"] for r in valid_results]
+    y_prob_eval = [r["y_prob"] for r in valid_results]
+
+    overall_metrics = compute_metrics(y_true_eval, y_prob_eval, threshold=args.threshold)
 
     # Per-domain metrics
     per_domain_metrics = {}
-    domains = set(r["domain"] for r in results)
+    domains = set(r["domain"] for r in valid_results)
     for d in sorted(domains):
-        d_sub = [r for r in results if r["domain"] == d]
+        d_sub = [r for r in valid_results if r["domain"] == d]
         per_domain_metrics[d] = compute_metrics([r["y_true"] for r in d_sub], [r["y_prob"] for r in d_sub], threshold=args.threshold)
 
     # Per-model-family metrics
     per_model_metrics = {}
-    model_families = set(r["model_family"] for r in results)
+    model_families = set(r["model_family"] for r in valid_results)
     for mf in sorted(model_families):
-        mf_sub = [r for r in results if r["model_family"] == mf]
+        mf_sub = [r for r in valid_results if r["model_family"] == mf]
         per_model_metrics[mf] = compute_metrics([r["y_true"] for r in mf_sub], [r["y_prob"] for r in mf_sub], threshold=args.threshold)
 
-    now_utc = datetime.now(timezone.utc).isoformat()
-    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    report = {
-        "timestamp": now_utc,
+    report_data = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "git_commit_sha": git_commit_sha,
         "corpus_path": os.path.abspath(args.corpus),
-        "api_url": args.api_url,
+        "corpus_sha256": corpus_sha256,
         "total_samples": len(samples),
-        "eval_samples": eval_count,
+        "eval_samples": len(valid_results),
+        "abstained_samples": abstained_count,
         "error_samples": error_count,
+        "coverage_rate_pct": coverage_rate,
         "threshold": args.threshold,
         "overall_metrics": overall_metrics,
         "per_domain": per_domain_metrics,
-        "per_model_family": per_model_metrics,
-        "predictions": [
-            {
-                "y_true": r["y_true"],
-                "y_prob": r["y_prob"],
-                "domain": r["domain"],
-                "model_family": r["model_family"]
-            } for r in results
-        ]
+        "per_model_family": per_model_metrics
     }
 
     os.makedirs(args.output_dir, exist_ok=True)
-    report_filename = f"report_{timestamp_str}.json"
-    report_path = os.path.join(args.output_dir, report_filename)
-    latest_path = os.path.join(args.output_dir, "report_latest.json")
+    report_file = os.path.join(args.output_dir, "report_latest.json")
+    with open(report_file, "w", encoding="utf-8") as f:
+        json.dump(report_data, f, indent=2)
 
-    with open(report_path, "w", encoding="utf-8") as f:
-        json.dump(report, f, indent=2)
+    timestamp_file = os.path.join(args.output_dir, f"report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json")
+    with open(timestamp_file, "w", encoding="utf-8") as f:
+        json.dump(report_data, f, indent=2)
 
-    with open(latest_path, "w", encoding="utf-8") as f:
-        json.dump(report, f, indent=2)
-
-    print_summary_table(report)
-    print(f"Report saved to: {report_path}")
+    print(f"Evaluation report successfully saved to '{report_file}' and '{timestamp_file}'.")
 
 if __name__ == "__main__":
     main()

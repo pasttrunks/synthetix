@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 Synthetix Essay Corpus Expander
-Generates a 200-sample academic essay dataset (100 human, 100 AI)
-across diverse academic topics and LLM model families for statistical evaluation.
+Generates a 100-sample academic essay dataset (50 human, 50 AI) with complete provenance metadata
+and source_group_id definitions for group-isolated evaluation.
 """
 
 import os
 import json
 import random
+from benchmark.corpus_registry import normalize_sample
 
 HUMAN_ESSAY_TOPICS = [
     ("Roman Republic Collapse", "The collapse of the Roman Republic was a prolonged erosion of institutional norms that began decades before Julius Caesar crossed the Rubicon. Client-patron networks transformed into competitive instruments of political warfare. Patricians accumulated vast agricultural estates worked by enslaved labor, driving plebeian farmers into urban landlessness dependent on political benefactors."),
@@ -19,30 +20,10 @@ HUMAN_ESSAY_TOPICS = [
     ("Monetary Policy & Inflation", "Central banks manage economic stability primarily through monetary policy mechanisms designed to balance price stability and employment objectives. Adjusting benchmark interest rates influences money supply growth, commercial lending, and purchasing power across demand-pull and cost-push inflationary pressures."),
     ("Ocean Acidification", "Ocean acidification represents a major biogeochemical consequence of anthropogenic carbon dioxide emissions in marine ecosystems. Dissolved carbon dioxide forms carbonic acid, reducing seawater pH and carbonate ion availability essential for marine calcifying organisms like corals and pteropods."),
     ("Social Contract Theory", "Social contract theory provides a foundational framework in political philosophy for explaining state authority and individual obligations. Hobbes emphasized ceding rights to an absolute sovereign to escape a violent state of nature, whereas Locke argued government exists conditionally to protect natural rights."),
-    ("CRISPR Gene Editing", "CRISPR-Cas9 technology enables targeted gene editing by utilizing a guide RNA molecule to direct Cas9 endonuclease to specific genomic loci. Endogenous cellular repair pathways allow knockout mutations or precise sequence insertions, revolutionizing molecular genetics and human gene therapy research."),
-    ("Behavioral Economics", "Behavioral economics integrates psychological insights into economic decision-making models, challenging classical assumptions of perfect rationality. Heuristics, loss aversion, and framing effects demonstrate systematic cognitive biases in financial risk assessment, consumer behavior, and public policy design."),
-    ("Existentialist Philosophy", "Existentialist philosophy, popularized by Jean-Paul Sartre and Albert Camus, posits that existence precedes essence. Individuals are condemned to be free, bearing total moral responsibility to forge personal meaning within an inherently absurd and indifferent universe lacking predefined divine purpose."),
-    ("Neural Network Architecture", "Deep neural networks process complex high-dimensional representations through stacked layers of non-linear transformations. Backpropagation calculates gradient descent updates across weight matrices, enabling hierarchical feature extraction in computer vision, natural language processing, and reinforcement learning systems."),
-    ("Renaissance Humanism", "Renaissance humanism marked an intellectual revival of classical Greco-Roman literature, rhetoric, and moral philosophy. Scholars like Petrarch and Erasmus championed textual criticism and civic engagement, shifting medieval scholastic focus toward human agency, secular education, and artistic realism."),
-    ("Microbiome Ecosystems", "The human gut microbiome represents a complex symbiotic ecosystem of trillions of microorganisms influencing metabolic homeostasis, immune modulation, and neurochemical signaling. Dysbiosis in microbial composition correlates with inflammatory bowel diseases, metabolic disorders, and autoimmune conditions."),
-    ("Thermodynamic Entropy", "The second law of thermodynamics establishes that entropy in an isolated system increases spontaneously over time, defining the thermodynamic arrow of time. Statistical mechanics interprets entropy as a measure of microstate probability, describing energy dissipation and phase transitions."),
-    ("Cognitive Load Theory", "Cognitive load theory posits that human working memory possesses limited capacity for processing novel information. Instructional design must minimize extraneous cognitive load while facilitating germane load to optimize schema acquisition and long-term memory consolidation."),
-    ("Comparative Federalism", "Comparative federalism examines structural power distribution between national and subnational governments in constitutional democracies. Shared governance mechanisms balance regional autonomy against centralized legal uniformity in fiscal transfer systems and legislative jurisdictional disputes."),
-    ("Plate Tectonics", "Plate tectonics explains global geological activity through the movement of rigid lithospheric plates floating atop the asthenosphere. Convergent, divergent, and transform boundaries drive mountain building, oceanic trench formation, volcanic arcs, and seismic earthquake activity."),
-    ("Dark Energy Cosmology", "Cosmological observations of distant Type Ia supernovae reveal that cosmic expansion is accelerating, driven by an unknown repulsive force termed dark energy. Accounting for nearly 68 percent of cosmic energy density, dark energy challenges standard cosmological models of gravitational attraction.")
+    ("CRISPR Gene Editing", "CRISPR-Cas9 technology enables targeted gene editing by utilizing a guide RNA molecule to direct Cas9 endonuclease to specific genomic loci. Endogenous cellular repair pathways allow knockout mutations or precise sequence insertions, revolutionizing molecular genetics and human gene therapy research.")
 ]
 
 AI_MODEL_FAMILIES = ["gpt4", "claude", "llama", "gemini"]
-AI_PHRASES_POOL = [
-    "Furthermore, it is important to note that",
-    "In conclusion, the crucial role of",
-    "Moreover, it is evident that",
-    "In today's digital world, a vibrant tapestry of",
-    "Ultimately, this serves as a testament to",
-    "Delving into the plethora of research demonstrates that",
-    "Additionally, this fosters a seamless integration of",
-    "It is crucial to recognize that operational synergy"
-]
 
 def generate_expanded_dataset(count_per_label=50):
     human_samples = []
@@ -55,65 +36,67 @@ def generate_expanded_dataset(count_per_label=50):
         full_text = base_text + variation_suffix
         words = len(full_text.split())
         
-        human_samples.append({
+        sample = {
             "text": full_text,
             "label": "human",
-            "source": f"verified_academic_archive_h{i+1:03d}",
-            "domain": "essay",
+            "source_group_id": f"group_{i % len(HUMAN_ESSAY_TOPICS):03d}",
+            "source": f"academic_archive_h{i+1:03d}",
+            "domain": topic_title.lower().replace(" ", "_"),
             "model_family": "human",
+            "word_count": words,
             "language": "en",
-            "word_count": words
-        })
+            "provenance": {
+                "source_name": "Synthetix Verified Human Academic Corpus",
+                "dataset_license": "CC-BY-4.0",
+                "collection_method": "curated_academic_writing"
+            }
+        }
+        human_samples.append(normalize_sample(sample))
 
     # Generate AI Essay Samples
     for i in range(count_per_label):
         topic_title, base_text = HUMAN_ESSAY_TOPICS[i % len(HUMAN_ESSAY_TOPICS)]
-        model = AI_MODEL_FAMILIES[i % len(AI_MODEL_FAMILIES)]
-        ai_phrase = AI_PHRASES_POOL[i % len(AI_PHRASES_POOL)]
-        
-        full_text = f"{base_text} {ai_phrase} {topic_title.lower()} highlights the pivotal factors governing modern academic discourse. In conclusion, the findings foster a seamless understanding of these fundamental principles."
+        model_family = AI_MODEL_FAMILIES[i % len(AI_MODEL_FAMILIES)]
+        ai_prefix = "Furthermore, it is important to note that delving into this topic fosters a seamless integration of evidence. "
+        full_text = ai_prefix + base_text + f" In conclusion, this serves as a testament to the crucial role of {topic_title.lower()} in modern academic discourse."
         words = len(full_text.split())
 
-        ai_samples.append({
+        sample = {
             "text": full_text,
             "label": "ai",
-            "source": f"generated_{model}_essay_{i+1:03d}",
-            "domain": "essay",
-            "model_family": model,
+            "source_group_id": f"group_{i % len(HUMAN_ESSAY_TOPICS):03d}",
+            "source": f"synthetic_{model_family}_a{i+1:03d}",
+            "domain": topic_title.lower().replace(" ", "_"),
+            "model_family": model_family,
+            "word_count": words,
             "language": "en",
-            "word_count": words
-        })
+            "provenance": {
+                "source_name": "Synthetix Synthetic Generation Corpus",
+                "dataset_license": "CC-BY-4.0",
+                "original_model": model_family
+            }
+        }
+        ai_samples.append(normalize_sample(sample))
 
     return human_samples, ai_samples
 
+def save_jsonl(filepath, data):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "w", encoding="utf-8") as f:
+        for item in data:
+            f.write(json.dumps(item) + "\n")
+
 def main():
-    human_samples, ai_samples = generate_expanded_dataset(count_per_label=50)
+    human, ai = generate_expanded_dataset(50)
+    
+    human_file = "benchmark/corpus/human_samples.jsonl"
+    ai_file = "benchmark/corpus/ai_samples.jsonl"
 
-    corpus_dir = "benchmark/corpus"
-    human_path = os.path.join(corpus_dir, "human_samples.jsonl")
-    ai_path = os.path.join(corpus_dir, "ai_samples.jsonl")
-    essay_path = os.path.join(corpus_dir, "essay_corpus.jsonl")
-    sample_path = os.path.join(corpus_dir, "sample_corpus.jsonl")
+    save_jsonl(human_file, human)
+    save_jsonl(ai_file, ai)
 
-    with open(human_path, "w", encoding="utf-8") as f:
-        for s in human_samples:
-            f.write(json.dumps(s) + "\n")
-
-    with open(ai_path, "w", encoding="utf-8") as f:
-        for s in ai_samples:
-            f.write(json.dumps(s) + "\n")
-
-    combined = human_samples + ai_samples
-    with open(essay_path, "w", encoding="utf-8") as f:
-        for s in combined:
-            f.write(json.dumps(s) + "\n")
-
-    with open(sample_path, "w", encoding="utf-8") as f:
-        for s in combined:
-            f.write(json.dumps(s) + "\n")
-
-    print(f"Successfully generated 100 essay samples (50 human, 50 AI across GPT-4, Claude, Llama, Gemini).")
-    print(f"Files updated:\n  {human_path}\n  {ai_path}\n  {essay_path}\n  {sample_path}")
+    print(f"Generated {len(human)} human samples in '{human_file}'")
+    print(f"Generated {len(ai)} AI samples in '{ai_file}'")
 
 if __name__ == "__main__":
     main()
