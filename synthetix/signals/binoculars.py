@@ -11,7 +11,7 @@ def compute_binoculars_score(text: str, perplexity_score: Optional[float] = None
     if len(words) < 15:
         return {
             "binoculars_score": None,
-            "binculars_flagged": False,
+            "binoculars_flagged": False,
             "reason": "Text too short for reliable zero-shot calculation (< 15 words)"
         }
 
@@ -19,7 +19,7 @@ def compute_binoculars_score(text: str, perplexity_score: Optional[float] = None
     if perplexity_score is not None and perplexity_score > 0:
         log_ppl = math.log(perplexity_score)
         # Standard Binoculars threshold: log-ppl ratio < 0.90 indicates synthetic text
-        binculars_val = round(log_ppl / (log_ppl + 0.4), 4)
+        binoculars_val = round(log_ppl / (log_ppl + 0.4), 4)
     else:
         # Heuristic zero-shot log-perplexity estimation based on vocabulary entropy
         vocab_size = len(set(words))
@@ -28,12 +28,13 @@ def compute_binoculars_score(text: str, perplexity_score: Optional[float] = None
         
         # Estimate synthetic regularity vs human variation
         estimated_entropy = (type_token_ratio * 4.5) + (avg_word_len * 0.3)
-        binculars_val = round(max(0.0, min(1.0, 1.0 - (estimated_entropy / 6.0))), 4)
+        binoculars_val = round(max(0.0, min(1.0, 1.0 - (estimated_entropy / 6.0))), 4)
 
-    is_flagged = binculars_val > 0.65
+    is_flagged = binoculars_val > 0.65
 
     return {
-        "binoculars_score": binculars_val,
+        "binoculars_score": binoculars_val,
         "binoculars_flagged": is_flagged,
         "confidence": "high" if len(words) > 50 else "medium"
     }
+
