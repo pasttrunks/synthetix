@@ -180,16 +180,19 @@ def score_text_with_transformer(text: str) -> float:
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits.squeeze()
-        if logits.dim() == 0 or (hasattr(logits, "__len__") and len(logits.shape) == 0):
-            ai_prob = torch.sigmoid(logits).item() * 100.0
-        elif hasattr(logits, "__len__") and len(logits) == 1:
-            ai_prob = torch.sigmoid(logits[0]).item() * 100.0
+        # Temperature scaling for probability calibration (T=2.5)
+        calibrated_logits = logits / 2.5
+        if calibrated_logits.dim() == 0 or (hasattr(calibrated_logits, "__len__") and len(calibrated_logits.shape) == 0):
+            ai_prob = torch.sigmoid(calibrated_logits).item() * 100.0
+        elif hasattr(calibrated_logits, "__len__") and len(calibrated_logits) == 1:
+            ai_prob = torch.sigmoid(calibrated_logits[0]).item() * 100.0
         else:
-            probs = torch.softmax(logits, dim=-1).tolist()
+            probs = torch.softmax(calibrated_logits, dim=-1).tolist()
             if isinstance(probs, float):
                 probs = [probs]
             ai_prob = probs[AI_LABEL_INDEX] * 100.0
     return max(0.0, min(100.0, float(ai_prob)))
+
 
 def score_text_with_ollama(text: str) -> Optional[float]:
     try:
