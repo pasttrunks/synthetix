@@ -3,10 +3,14 @@ import re
 import math
 import requests
 import numpy as np
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
+
+from synthetix.ingest import extract_text_from_bytes, filter_qualifying_prose
+from synthetix.report_exporter import generate_html_review_report
+
 
 import uvicorn
 import torch
@@ -376,9 +380,25 @@ def analyze(payload: TextPayload):
     )
 
 
+@app.post("/api/extract-text")
+async def extract_text_endpoint(file: UploadFile = File(...)):
+    contents = await file.read()
+    extracted_text, stats = extract_text_from_bytes(contents, file.filename or "file.txt")
+    return {
+        "filename": file.filename,
+        "extracted_text": extracted_text,
+        "stats": stats
+    }
+
+@app.post("/api/export-report", response_class=HTMLResponse)
+def export_report_endpoint(analysis: Dict[str, Any]):
+    html_content = generate_html_review_report(analysis)
+    return HTMLResponse(content=html_content, status_code=200)
+
 def main():
     print("Starting Synthetix AI Detector Engine on http://localhost:8000...")
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
 
 if __name__ == "__main__":
     main()
