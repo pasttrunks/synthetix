@@ -1,0 +1,40 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.pyc
+
+# Environments
+.env
+.venv/
+venv/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+release/
+
+# Testing
+.pytest_cache/
+
+# Model cache directories
+.cache/
+models/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Large binary files
+*.zip
+*.tar.gz
+
+# Scratch directory
+scratch/
+
+# Embedded repositories
+Binoculars/
+noplag-engine/

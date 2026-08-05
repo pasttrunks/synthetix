@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synthetix - AI Writing Inspector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0c0e14;
+            --panel-bg: #141722;
+            --panel-border: rgba(255, 255, 255, 0.07);
+            --panel-hover: rgba(255, 255, 255, 0.12);
+            --accent-primary: #6366f1;
+            --accent-primary-hover: #4f46e5;
+            --text-heading: #f8fafc;
+            --text-body: #94a3b8;
+            --text-muted: #64748b;
+            --risk-high: #f43f5e;
+            --risk-mid: #fbbf24;
+            --risk-low: #10b981;
+            --card-radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-body);
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-wrapper {
+            width: 100%;
+            max-width: 1180px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .header-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: #1e2333;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .brand-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-heading);
+            letter-spacing: -0.02em;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #181c2b;
+            border: 1px solid var(--panel-border);
+            padding: 0.4rem 0.85rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--risk-low);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 440px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 960px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--card-radius);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-heading);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sample-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sample {
+            background: transparent;
+            border: 1px solid var(--panel-border);
+            color: var(--text-body);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-sample:hover {
+            background: var(--panel-hover);
+            color: var(--text-heading);
+        }
+
+        textarea {
+            width: 100%;
+            height: 320px;
+            background: #0f111a;
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 1.1rem;
+            color: var(--text-heading);
+            font-size: 0.95rem;
+            line-height: 1.65;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .editor-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .meta-counts {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .btn-analyze {
+            background: var(--accent-primary);
+            color: #fff;
+            border: none;
+            padding: 0.85rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-analyze:hover {
+            background: var(--accent-primary-hover);
+        }
+
+        .score-hero {
+            background: #0f111a;
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 1.35rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .score-display {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+
+        .score-number {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.75rem;
+            font-weight: 700;
+            color: var(--text-heading);
+            line-height: 1;
+        }
+
+        .score-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .score-badge {
+            padding: 0.35rem 0.85rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-human {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--risk-low);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-inconclusive {
+            background: rgba(251, 191, 36, 0.12);
+            color: var(--risk-mid);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+
+        .badge-ai {
+            background: rgba(244, 63, 94, 0.12);
+            color: var(--risk-high);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+        }
+
+        .badge-neutral {
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-muted);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+
+        .warning-banner {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 10px;
+            padding: 0.9rem 1.25rem;
+            color: #fde68a;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .warning-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .score-disclaimer {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-top: -0.5rem;
+            font-style: italic;
+        }
+
+        .metrics-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .metric-card {
+            background: #10121c;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 0.75rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .metric-head {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .metric-title {
+            color: var(--text-heading);
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-body);
+            font-size: 0.8rem;
+        }
+
+        .bar-container {
+            height: 4px;
+            background: #1b2030;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-primary);
+            transition: width 0.35s ease;
+        }
+
+        .inspector-box {
+            background: #0f111a;
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 0.9rem;
+            max-height: 180px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            line-height: 1.65;
+            color: var(--text-body);
+        }
+
+        .hl-ai {
+            background: rgba(244, 63, 94, 0.15);
+            color: #fca5a5;
+            border-bottom: 1px solid rgba(244, 63, 94, 0.4);
+            padding: 0 3px;
+            border-radius: 2px;
+        }
+
+        .hl-human {
+            background: rgba(16, 185, 129, 0.12);
+            color: #a7f3d0;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 0 3px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+    <nav class="header-nav">
+        <div class="brand-logo">
+            <div class="brand-icon">S</div>
+            <div class="brand-name">Synthetix AI Engine</div>
+        </div>
+        <div class="status-pill">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Connecting...</span>
+        </div>
+    </nav>
+
+    <div class="warning-banner">
+        <span class="warning-icon">⚠️</span>
+        <span>This tool is experimental and has not been validated for accuracy. Do not use results for grading, discipline, hiring, publishing decisions, or accusations of misconduct.</span>
+    </div>
+
+    <div class="main-grid">
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Document Content</span>
+                <div class="sample-actions">
+                    <button class="btn-sample" onclick="loadSample('human')">Human Essay</button>
+                    <button class="btn-sample" onclick="loadSample('ai')">AI Essay</button>
+                </div>
+            </div>
+
+            <textarea id="inputText" placeholder="Paste essay or document content here to inspect structural patterns..."></textarea>
+
+            <div class="editor-footer">
+                <div class="meta-counts">
+                    <span id="wordCount">0 words</span>
+                    <span id="charCount">0 chars</span>
+                </div>
+                <span style="font-size: 0.78rem; color: var(--text-muted);" id="engineInfo">Active Engine: Connecting...</span>
+            </div>
+
+            <button class="btn-analyze" id="btnAnalyze" onclick="analyzeText()">Analyze Text</button>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Inspection Results</span>
+            </div>
+
+            <div class="score-hero">
+                <div class="score-display">
+                    <div class="score-number" id="aiScore">0%</div>
+                    <div class="score-meta">Experimental detector score</div>
+                </div>
+                <div class="score-badge badge-human" id="scoreBadge">Not flagged</div>
+            </div>
+            <div class="score-disclaimer">
+                * Note: This score is an experimental detector score and is not a calibrated probability.
+            </div>
+
+            <div class="metrics-stack">
+                <div class="metric-card">
+                    <div class="metric-head">
+                        <span class="metric-title">Burstiness Score (CV)</span>
+                        <span class="metric-value" id="burstVal">0.00</span>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-fill" id="burstBar"></div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-head">
+                        <span class="metric-title">Predictability Index</span>
+                        <span class="metric-value" id="predictVal">0.0%</span>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-fill" id="predictBar"></div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-head">
+                        <span class="metric-title">Synthetic Phrase Matches</span>
+                        <span class="metric-value" id="phraseVal">0</span>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-fill" id="phraseBar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-header" style="margin-top: 0.2rem;">
+                <span class="panel-title" style="font-size: 0.82rem;">Sentence Pattern Map</span>
+            </div>
+            <div class="inspector-box" id="inspectorMap">
+                <em>Sentence classification highlights will appear here...</em>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const sampleAI = `In today's fast-paced digital world, artificial intelligence plays a crucial role in transforming modern education. It is important to note that machine learning models provide a plethora of benefits for students across the globe. Furthermore, automated systems can streamline complex tasks and foster seamless collaboration. In addition to this, personalized learning paths enable users to delve deeper into complex topics with ease. Ultimately, it is evident that AI will continue to shape the future landscape of technology and society.`;
+
+    const sampleHuman = `Honestly, I was pretty skeptical about using AI for studying at first. I tried a couple of apps last month, but most of them felt kind of clunky and didn't really help with my calculus homework. But yesterday I found a quick trick for graphing derivatives that actually made sense! My professor explained it totally differently in class, so having another perspective was a huge lifesaver.`;
+
+    const API_URL = "/api/analyze";
+    const HEALTH_URL = "/api/health";
+
+    const textarea = document.getElementById('inputText');
+    textarea.addEventListener('input', updateCounts);
+
+    function updateCounts() {
+        const text = textarea.value;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        document.getElementById('wordCount').textContent = words + ' words';
+        document.getElementById('charCount').textContent = text.length + ' chars';
+    }
+
+    function loadSample(type) {
+        textarea.value = type === 'ai' ? sampleAI : sampleHuman;
+        updateCounts();
+        analyzeText();
+    }
+
+    async function checkHealth() {
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const engineInfo = document.getElementById('engineInfo');
+
+        try {
+            const res = await fetch(HEALTH_URL + "?t=" + Date.now());
+            if (res.ok) {
+                const data = await res.json();
+                statusText.textContent = data.active_engine;
+                statusDot.style.background = data.ollama_active ? "var(--risk-low)" : "var(--risk-mid)";
+                engineInfo.textContent = "Active Engine: " + data.active_engine;
+            }
+        } catch(e) {
+            statusText.textContent = "Python API Offline";
+            statusDot.style.background = "var(--risk-high)";
+            engineInfo.textContent = "Engine: Offline";
+        }
+    }
+
+    function showError(msg) {
+        document.getElementById('aiScore').textContent = 'N/A';
+        const badge = document.getElementById('scoreBadge');
+        badge.textContent = 'Error';
+        badge.className = 'score-badge badge-ai';
+
+        document.getElementById('burstVal').textContent = '0.00';
+        document.getElementById('burstBar').style.width = '0%';
+        document.getElementById('predictVal').textContent = '0.0%';
+        document.getElementById('predictBar').style.width = '0%';
+        document.getElementById('phraseVal').textContent = '0';
+        document.getElementById('phraseBar').style.width = '0%';
+
+        const map = document.getElementById('inspectorMap');
+        map.innerHTML = '<span style="color: var(--risk-high); font-weight: 500;">⚠️ ' + msg + '</span>';
+    }
+
+    async function analyzeText() {
+        const text = textarea.value.trim();
+        if (!text) return;
+
+        const btn = document.getElementById('btnAnalyze');
+        btn.textContent = "Analyzing (DeBERTa-v3)...";
+
+        try {
+            const res = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: text })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                renderResults(data.overall_ai_score, data.burstiness_cv, data.predictability_index, data.phrase_count, data.sentence_scores, data.model_name, data.ollama_active);
+            } else {
+                throw new Error("HTTP " + res.status);
+            }
+        } catch (e) {
+            console.warn("API query failed:", e);
+            showError("Backend unavailable. Cannot analyze text without the detection server running.");
+        } finally {
+            btn.textContent = "Analyze Text";
+        }
+    }
+
+    function renderResults(aiScore, burstinessCv, predictabilityIdx, phraseCount, sentences, modelName, ollamaActive) {
+        const badge = document.getElementById('scoreBadge');
+        if (aiScore === null || aiScore === undefined) {
+            document.getElementById('aiScore').textContent = 'N/A';
+            badge.textContent = 'Detection unavailable - no model loaded';
+            badge.className = 'score-badge badge-neutral';
+        } else if (aiScore > 65) {
+            document.getElementById('aiScore').textContent = aiScore + '%';
+            badge.textContent = 'Flagged - review recommended';
+            badge.className = 'score-badge badge-ai';
+        } else if (aiScore >= 35) {
+            document.getElementById('aiScore').textContent = aiScore + '%';
+            badge.textContent = 'Inconclusive - insufficient evidence';
+            badge.className = 'score-badge badge-inconclusive';
+        } else {
+            document.getElementById('aiScore').textContent = aiScore + '%';
+            badge.textContent = 'Not flagged';
+            badge.className = 'score-badge badge-human';
+        }
+
+        if (modelName) {
+            document.getElementById('engineInfo').textContent = "Active Engine: " + modelName;
+            document.getElementById('statusText').textContent = modelName;
+            const statusDot = document.getElementById('statusDot');
+            if (ollamaActive || modelName.includes("Ensemble")) {
+                statusDot.style.background = "var(--risk-low)";
+            } else if (modelName.includes("DeBERTa") || modelName.includes("RoBERTa")) {
+                statusDot.style.background = "var(--risk-mid)";
+            } else {
+                statusDot.style.background = "var(--risk-high)";
+            }
+        }
+
+        document.getElementById('burstVal').textContent = burstinessCv !== undefined && burstinessCv !== null ? burstinessCv : '0.00';
+        document.getElementById('burstBar').style.width = Math.min(100, Math.max(0, (0.50 - (burstinessCv || 0)) * 160)) + '%';
+
+        document.getElementById('predictVal').textContent = (predictabilityIdx !== undefined && predictabilityIdx !== null ? predictabilityIdx : 0) + '%';
+        document.getElementById('predictBar').style.width = (predictabilityIdx || 0) + '%';
+
+        document.getElementById('phraseVal').textContent = phraseCount !== undefined && phraseCount !== null ? phraseCount : 0;
+        document.getElementById('phraseBar').style.width = Math.min(100, (phraseCount || 0) * 25) + '%';
+
+        const map = document.getElementById('inspectorMap');
+        map.innerHTML = '';
+        if (sentences && Array.isArray(sentences)) {
+            sentences.forEach(item => {
+                const span = document.createElement('span');
+                span.className = item.is_suspicious ? 'hl-ai' : 'hl-human';
+                span.textContent = item.sentence + ' ';
+                map.appendChild(span);
+            });
+        } else {
+            map.innerHTML = '<em>Sentence classification unavailable...</em>';
+        }
+    }
+
+    checkHealth();
+    setInterval(checkHealth, 5000);
+</script>
+
+</body>
+</html>

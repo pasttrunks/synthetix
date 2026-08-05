@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SynthetixCorpusManifestSample",
+  "description": "JSON Schema for Synthetix AI Detector benchmark dataset samples",
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The full body of text to be analyzed by the detector"
+    },
+    "label": {
+      "type": "string",
+      "enum": ["human", "ai"],
+      "description": "Ground truth label: 'human' for human-written text, 'ai' for AI-generated text"
+    },
+    "source": {
+      "type": "string",
+      "description": "Origin dataset, corpus collection name, or author tag"
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["essay", "email", "code", "blog", "report", "news", "narrative", "technical", "other"],
+      "description": "Text format or application domain"
+    },
+    "model_family": {
+      "type": "string",
+      "enum": ["gpt4", "claude", "human", "llama", "gemini", "other"],
+      "description": "Generative model family used to create the text, or 'human'"
+    },
+    "word_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of words in the text sample"
+    },
+    "language": {
+      "type": "string",
+      "default": "en",
+      "description": "ISO language code of the text sample"
+    }
+  },
+  "required": ["text", "label", "source", "domain", "model_family", "word_count", "language"]
+}

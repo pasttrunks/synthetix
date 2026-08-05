@@ -1,0 +1,3 @@
+Plagiarism detection using winnowing algorithm works by hashing tokenized substrings.
+This is another document testing local text similarity detection tools.
+Academic writing requires proper citation of original sources.

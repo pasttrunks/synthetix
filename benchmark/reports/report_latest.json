@@ -1,0 +1,291 @@
+{
+  "timestamp": "2026-07-25T18:55:20.149338+00:00",
+  "corpus_path": "C:\\Users\\marsh\\Documents\\antigravity\\lucid-newton\\benchmark\\corpus\\test.jsonl",
+  "api_url": "http://localhost:8000/api/analyze",
+  "total_samples": 16,
+  "eval_samples": 16,
+  "error_samples": 0,
+  "threshold": 0.5,
+  "overall_metrics": {
+    "n_samples": 16,
+    "auroc": 0.75,
+    "auprc": 0.625,
+    "brier_score": 0.1548,
+    "ece": 0.1695,
+    "tpr_at_0_1_fpr": 0.5,
+    "tpr_at_1_fpr": 0.5,
+    "confusion_matrix": {
+      "tp": 1,
+      "fp": 0,
+      "tn": 12,
+      "fn": 3,
+      "precision": 1.0,
+      "recall": 0.25,
+      "accuracy": 0.8125,
+      "fpr": 0.0,
+      "f1": 0.4
+    }
+  },
+  "per_domain": {
+    "blog": {
+      "n_samples": 4,
+      "auroc": 0.5,
+      "auprc": 0.25,
+      "brier_score": 0.25,
+      "ece": 0.25,
+      "tpr_at_0_1_fpr": 0.0,
+      "tpr_at_1_fpr": 0.0,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 3,
+        "fn": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "accuracy": 0.75,
+        "fpr": 0.0,
+        "f1": 0.0
+      }
+    },
+    "email": {
+      "n_samples": 1,
+      "auroc": 0.0,
+      "auprc": 0.0,
+      "brier_score": 0.0,
+      "ece": 0.0,
+      "tpr_at_0_1_fpr": 0.0,
+      "tpr_at_1_fpr": 0.0,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 1,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "accuracy": 1.0,
+        "fpr": 0.0,
+        "f1": 0.0
+      }
+    },
+    "essay": {
+      "n_samples": 3,
+      "auroc": 0.0,
+      "auprc": 0.0,
+      "brier_score": 0.0,
+      "ece": 0.0,
+      "tpr_at_0_1_fpr": 0.0,
+      "tpr_at_1_fpr": 0.0,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 3,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "accuracy": 1.0,
+        "fpr": 0.0,
+        "f1": 0.0
+      }
+    },
+    "narrative": {
+      "n_samples": 1,
+      "auroc": 0.0,
+      "auprc": 0.0,
+      "brier_score": 1.0,
+      "ece": 1.0,
+      "tpr_at_0_1_fpr": 0.0,
+      "tpr_at_1_fpr": 0.0,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 0,
+        "fn": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "accuracy": 0.0,
+        "fpr": 0.0,
+        "f1": 0.0
+      }
+    },
+    "news": {
+      "n_samples": 2,
+      "auroc": 0.0,
+      "auprc": 0.0,
+      "brier_score": 0.0,
+      "ece": 0.0,
+      "tpr_at_0_1_fpr": 0.0,
+      "tpr_at_1_fpr": 0.0,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 2,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "accuracy": 1.0,
+        "fpr": 0.0,
+        "f1": 0.0
+      }
+    },
+    "technical": {
+      "n_samples": 5,
+      "auroc": 1.0,
+      "auprc": 1.0,
+      "brier_score": 0.0953,
+      "ece": 0.1424,
+      "tpr_at_0_1_fpr": 1.0,
+      "tpr_at_1_fpr": 1.0,
+      "confusion_matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 3,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.5,
+        "accuracy": 0.8,
+        "fpr": 0.0,
+        "f1": 0.6667
+      }
+    }
+  },
+  "per_model_family": {
+    "human": {
+      "n_samples": 12,
+      "auroc": 0.0,
+      "auprc": 0.0,
+      "brier_score": 0.0,
+      "ece": 0.0,
+      "tpr_at_0_1_fpr": 0.0,
+      "tpr_at_1_fpr": 0.0,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 12,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "accuracy": 1.0,
+        "fpr": 0.0,
+        "f1": 0.0
+      }
+    },
+    "llama": {
+      "n_samples": 4,
+      "auroc": 0.0,
+      "auprc": 0.0,
+      "brier_score": 0.6191,
+      "ece": 0.678,
+      "tpr_at_0_1_fpr": 0.0,
+      "tpr_at_1_fpr": 0.0,
+      "confusion_matrix": {
+        "tp": 1,
+        "fp": 0,
+        "tn": 0,
+        "fn": 3,
+        "precision": 1.0,
+        "recall": 0.25,
+        "accuracy": 0.25,
+        "fpr": 0.0,
+        "f1": 0.4
+      }
+    }
+  },
+  "predictions": [
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "news",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "technical",
+      "model_family": "human"
+    },
+    {
+      "y_true": 1,
+      "y_prob": 0.978,
+      "domain": "technical",
+      "model_family": "llama"
+    },
+    {
+      "y_true": 1,
+      "y_prob": 0.0,
+      "domain": "narrative",
+      "model_family": "llama"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "essay",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "essay",
+      "model_family": "human"
+    },
+    {
+      "y_true": 1,
+      "y_prob": 0.31,
+      "domain": "technical",
+      "model_family": "llama"
+    },
+    {
+      "y_true": 1,
+      "y_prob": 0.0,
+      "domain": "blog",
+      "model_family": "llama"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "blog",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "blog",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "email",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "technical",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "technical",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "news",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "essay",
+      "model_family": "human"
+    },
+    {
+      "y_true": 0,
+      "y_prob": 0.0,
+      "domain": "blog",
+      "model_family": "human"
+    }
+  ]
+}
