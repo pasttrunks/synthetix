@@ -96,6 +96,9 @@ def is_primarily_english(text: str) -> bool:
 class TextPayload(BaseModel):
     text: str
 
+from synthetix.signals.binoculars import compute_binoculars_score
+from synthetix.signals.span_detector import detect_mixed_authorship_spans
+
 class SentenceScore(BaseModel):
     sentence: str
     length: int
@@ -122,6 +125,9 @@ class AnalysisResult(BaseModel):
     text_coverage: Optional[float] = Field(default=None, ge=0, le=100)
     language_warning: Optional[str] = None
     message: Optional[str] = None
+    signals: Optional[Dict[str, Any]] = None
+    change_points: Optional[Dict[str, Any]] = None
+
 
 def check_ollama_alive() -> bool:
     try:
@@ -341,6 +347,17 @@ def analyze(payload: TextPayload):
         text_coverage = None
 
 
+    # Phase 2: Compute multi-signal ensemble outputs
+    binoculars_res = compute_binoculars_score(raw_text)
+    span_res = detect_mixed_authorship_spans([s.model_dump() for s in sentence_scores])
+
+    signals = {
+        "transformer_probability": overall_score,
+        "binoculars": binoculars_res,
+        "burstiness_cv": round(cv, 3),
+        "predictability_index": predictability_idx
+    }
+
     return AnalysisResult(
         overall_ai_score=overall_score,
         burstiness_cv=round(cv, 3),
@@ -352,8 +369,11 @@ def analyze(payload: TextPayload):
         sentence_scores=sentence_scores,
         chunk_scores=chunk_scores,
         text_coverage=text_coverage,
-        language_warning=lang_warning
+        language_warning=lang_warning,
+        signals=signals,
+        change_points=span_res
     )
+
 
 def main():
     print("Starting Synthetix AI Detector Engine on http://localhost:8000...")
