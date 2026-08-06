@@ -1,0 +1,36 @@
+{
+  "name": "Synthetix Honest Pilot Set",
+  "frozen_at": "2026-08-06T04:14:34.435051+00:00",
+  "freeze_rules": [
+    "No detector scores were inspected before freezing",
+    "No sample will be replaced or edited based on detector output",
+    "Pilot set is separate from tuned regression fixtures and not used for tuning"
+  ],
+  "composition": {
+    "human_count": 50,
+    "ai_count": 50,
+    "human_min_words": 313,
+    "ai_min_words": 302,
+    "distinct_human_sources": 50,
+    "distinct_human_authors": 41
+  },
+  "ai_generation": {
+    "provider": "OpenAI",
+    "model": "openai-community/gpt2",
+    "model_revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "repetition_penalty": 1.2,
+    "no_repeat_ngram_size": 3,
+    "per_sample_seed": "1000 + index",
+    "max_new_tokens": 520,
+    "min_new_tokens": 300,
+    "length_retries": 15
+  },
+  "human_sourcing": {
+    "source": "Project Gutenberg public-domain works",
+    "license": "Public domain in the USA (Project Gutenberg License)",
+    "verification": "Gutenberg header title/author matched before acceptance",
+    "passage_length": "313-418 words"
+  }
+}
