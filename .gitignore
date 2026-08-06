@@ -35,6 +35,11 @@ Thumbs.db
 # Scratch directory
 scratch/
 
+# Timestamped benchmark reports
+benchmark/reports/report_[0-9]*.json
+
 # Embedded repositories
 Binoculars/
 noplag-engine/
+
+

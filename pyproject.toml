@@ -34,6 +34,8 @@ synthetix-serve = "server:main"
 
 [tool.setuptools]
 py-modules = ["server"]
+packages = ["synthetix", "benchmark"]
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

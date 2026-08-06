@@ -4,9 +4,15 @@ from typing import Dict, Any
 def generate_html_review_report(analysis: Dict[str, Any]) -> str:
     """Generate self-contained HTML review report artifact for educator inspection."""
     score = analysis.get("overall_ai_score")
-    score_str = f"{score}%" if score is not None else "N/A (Uncertain)"
+    if isinstance(score, (int, float)):
+        score_str = html.escape(f"{score}%")
+    elif score is not None:
+        score_str = html.escape(str(score))
+    else:
+        score_str = "N/A (Uncertain)"
     model_name = html.escape(str(analysis.get("model_name", "Unknown Model")))
     method_desc = html.escape(str(analysis.get("analysis_method", "Standard Evaluation")))
+
     
     sentences_html = []
     for s in analysis.get("sentence_scores", []):
