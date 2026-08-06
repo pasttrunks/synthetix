@@ -9,6 +9,19 @@ Research prototype for AI text detection built on sequence classification, metri
 >
 > **Do not use for adverse actions**, including academic grading, disciplinary accusations, hiring evaluations, or publishing decisions.
 
+## Windows: One-Click Launch
+
+1. **Double-click `Start Synthetix.cmd`** for Academic Sensitive mode (Desklib backend — slower, stronger recall, higher false-positive risk).
+2. **Double-click `Start Synthetix Fast.cmd`** for Fast Baseline mode (HC3 RoBERTa backend — faster, but may miss AI-written text).
+3. **First launch may take longer** because dependencies and model files are downloaded. Later launches reuse the installed `.venv` and the model cache.
+4. **Everything runs locally** after the model files are cached; no account, cloud API, or telemetry is involved.
+5. **Results are experimental** and must not be used as proof of misconduct.
+
+Both launchers automatically: create/use `.venv` (Python 3.10+), install
+dependencies only when needed, start the server, wait for `/health` readiness,
+open `http://localhost:8000`, keep the terminal open for logs, and stop the
+server when the window is closed or interrupted.
+
 ## Features
 
 - **RoBERTa Sequence Classification**: Baseline model using `Hello-SimpleAI/chatgpt-detector-roberta` fine-tuned on HC3 question-answer pairs.
