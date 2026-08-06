@@ -36,6 +36,12 @@ BACKEND_LABELS = {
     "balanced_review": "Experimental Comparison — two detectors with an uncertain outcome when they disagree",
 }
 
+DEFAULT_PORTS = {
+    "hc3_roberta": 8000,
+    "desklib_academic": 8001,
+    "balanced_review": 8002,
+}
+
 REQUIRED_IMPORTS = ["fastapi", "uvicorn", "torch", "transformers", "sklearn", "requests"]
 DEFAULT_HEALTH_TIMEOUT_S = 900
 
@@ -142,19 +148,17 @@ def install_deps(python_cmd: list) -> bool:
     return result.returncode == 0
 
 
-def wait_for_health(port: int, timeout_s: int = DEFAULT_HEALTH_TIMEOUT_S):
-    """Poll /health until it responds. Returns (ok, elapsed_s)."""
-    url = health_url(port)
+def wait_for_ready(port: int, backend: str, timeout_s: int = DEFAULT_HEALTH_TIMEOUT_S):
+    """Poll /health until model_loaded is true and backend_name matches.
+
+    Returns (ok, elapsed_s, health)."""
     t0 = time.time()
     while time.time() - t0 < timeout_s:
-        try:
-            with urllib.request.urlopen(url, timeout=5) as res:
-                if res.status == 200:
-                    return True, time.time() - t0
-        except Exception:
-            pass
+        health = probe_health(port)
+        if backend_ready(health, backend):
+            return True, time.time() - t0, health
         time.sleep(1.0)
-    return False, time.time() - t0
+    return False, time.time() - t0, probe_health(port)
 
 
 def stop_server(proc):
@@ -248,12 +252,42 @@ def install_console_close_handler(proc_holder):
         pass
 
 
-def port_has_synthetix(port: int) -> bool:
+def probe_health(port: int):
+    """Return parsed /health JSON for the port, or None if unreachable/not JSON."""
     try:
         with urllib.request.urlopen(health_url(port), timeout=3) as res:
-            return res.status == 200
+            if res.status != 200:
+                return None
+            import json
+            return json.loads(res.read().decode("utf-8"))
     except Exception:
-        return False
+        return None
+
+
+def backend_ready(health: dict, backend: str) -> bool:
+    """True only when /health reports model_loaded and the exact backend name."""
+    return bool(health) and health.get("model_loaded") is True and health.get("backend_name") == backend
+
+
+def classify_existing(health, backend: str) -> str:
+    """Decide what to do with a server already answering on the port.
+
+    Returns 'reuse' (same backend), 'conflict' (different Synthetix backend),
+    or 'launch' (no server / unrelated response). A different backend is never
+    silently reused.
+    """
+    if health is None:
+        return "launch"
+    running = health.get("backend_name")
+    if running == backend:
+        return "reuse"
+    if running:
+        return "conflict"
+    return "launch"
+
+
+def resolve_port(backend: str, requested: int) -> int:
+    return requested or DEFAULT_PORTS.get(backend, 8000)
 
 
 def main() -> int:
@@ -264,7 +298,7 @@ def main() -> int:
         default=os.environ.get("SYNTETIX_BACKEND", "hc3_roberta"),
         help="Detector backend to launch (default: hc3_roberta)",
     )
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=None, help="Port override (defaults are per backend: 8000 hc3, 8001 desklib, 8002 balanced)")
     parser.add_argument("--no-browser", action="store_true", help="Do not open the browser")
     parser.add_argument(
         "--health-timeout",
@@ -281,11 +315,38 @@ def main() -> int:
     print("Results are experimental and must not be used as proof of misconduct.")
     print("=" * 64)
 
-    if port_has_synthetix(args.port):
-        print(f"A Synthetix server is already running on port {args.port}; reusing it.")
+    port = resolve_port(args.backend, args.port)
+    existing = probe_health(port)
+    decision = classify_existing(existing, args.backend)
+    if decision == "reuse":
+        print(f"An existing Synthetix server with backend '{args.backend}' is already running on port {port}.")
+        if not backend_ready(existing, args.backend):
+            print("Waiting for the existing server's detector to finish loading...")
+            ok, elapsed, health = wait_for_ready(port, args.backend, args.health_timeout)
+            if not ok:
+                print("ERROR: the existing server did not become ready in time.", file=sys.stderr)
+                return 1
+            print(f"Detector ready after {elapsed:.0f}s.")
+        else:
+            print("Detector ready.")
         if not args.no_browser and os.environ.get("SYNTETIX_NO_BROWSER") != "1":
-            webbrowser.open(f"http://localhost:{args.port}")
+            webbrowser.open(f"http://localhost:{port}?expected_backend={args.backend}")
+        else:
+            print(f"Open http://localhost:{port}?expected_backend={args.backend} in your browser.")
         return 0
+    if decision == "conflict":
+        running_backend = (existing or {}).get("backend_name")
+        print(
+            f"ERROR: port {port} is already running Synthetix with backend "
+            f"'{running_backend or 'unknown'}' but '{args.backend}' was requested.",
+            file=sys.stderr,
+        )
+        print(
+            "Close that server first, then relaunch. Each backend has a dedicated "
+            "port: hc3_roberta=8000, desklib_academic=8001, balanced_review=8002.",
+            file=sys.stderr,
+        )
+        return 1
 
     use_current = os.environ.get("SYNTETIX_LAUNCH_NO_VENV") == "1"
     if use_current:
@@ -329,7 +390,7 @@ def main() -> int:
                 )
                 return 1
 
-    print(f"Launching backend '{args.backend}'...")
+    print(f"Launching backend '{args.backend}' on port {port}...")
     env = os.environ.copy()
     env["SYNTETIX_BACKEND"] = args.backend
     proc = subprocess.Popen(
@@ -338,7 +399,7 @@ def main() -> int:
             "--backend",
             args.backend,
             "--port",
-            str(args.port),
+            str(port),
         ],
         cwd=REPO_ROOT,
         env=env,
@@ -350,13 +411,21 @@ def main() -> int:
 
     print("Waiting for the detector to load...")
     print("  (first launch may download model files and take a while)")
-    ok, elapsed = wait_for_health(args.port, args.health_timeout)
+    ok, elapsed, health = wait_for_ready(port, args.backend, args.health_timeout)
     if not ok:
-        print(
-            "ERROR: the server did not become ready in time. This is usually a model "
-            "download failure or insufficient memory (the detector needs ~2 GB).",
-            file=sys.stderr,
-        )
+        reported_backend = (health or {}).get("backend_name")
+        if reported_backend and reported_backend != args.backend:
+            print(
+                f"ERROR: startup failed because /health reports backend "
+                f"'{reported_backend}' but '{args.backend}' was requested.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "ERROR: the server did not become ready in time. This is usually a model "
+                "download failure or insufficient memory (the detector needs ~2 GB).",
+                file=sys.stderr,
+            )
         if proc.poll() is not None:
             print(
                 "  The server process exited on its own; see its output above for the "
@@ -367,7 +436,7 @@ def main() -> int:
         return 1
 
     print(f"Detector ready (health OK after {elapsed:.0f}s).")
-    url = f"http://localhost:{args.port}"
+    url = f"http://localhost:{port}?expected_backend={args.backend}"
     if not args.no_browser and os.environ.get("SYNTETIX_NO_BROWSER") != "1":
         print(f"Opening {url} in your browser...")
         webbrowser.open(url)

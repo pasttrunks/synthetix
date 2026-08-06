@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 
 from synthetix.model_backends import (
     BalancedReviewBackend,
@@ -7,6 +8,12 @@ from synthetix.model_backends import (
     create_backend,
 )
 from synthetix.report_exporter import generate_html_review_report
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def read_ui():
+    return (ROOT / "ai_detector.html").read_text(encoding="utf-8")
 
 
 class FakeBackend:
@@ -131,3 +138,56 @@ def test_exported_disagreement_report_contains_evidence_and_warning():
     assert "fe9b4da50ee2cca5c877d607640681609170e363" in html
     assert "disagree" in html
     assert "Disagreement is inconclusive" in html
+
+
+def test_balanced_ui_hides_generic_single_score():
+    html = read_ui()
+    assert 'id="scoreHero"' in html
+    assert "scoreHero.style.display = 'none'" in html
+
+
+def test_balanced_ui_renders_both_model_scores_and_plain_outcome():
+    html = read_ui()
+    for text in [
+        "HC3 Fast Baseline",
+        "Desklib Academic Sensitive",
+        "At/above the 0.50 threshold",
+        "Below the 0.50 threshold",
+        "Not a probability.",
+        "Both detectors found an elevated AI-writing signal. This is not proof that the text was AI-written.",
+        "Neither detector found an elevated AI-writing signal. This does not prove that the text was written by a human.",
+        "The detectors disagree. This analysis is inconclusive.",
+    ]:
+        assert text in html, f"missing: {text}"
+    # Ambiguous labels without the explanatory sentence must not be used.
+    assert "Strong agreement" not in html
+    assert "Low agreement" not in html
+    assert "Uncertain disagreement" not in html
+
+
+def test_sentence_color_cannot_contradict_displayed_score():
+    html = read_ui()
+    # Highlighting is driven by the displayed ai_score threshold, not a separate flag.
+    assert "item.ai_score >= 50" in html
+    assert "item.is_suspicious ? 'hl-ai'" not in html
+
+
+def test_balanced_ui_hides_sentence_map():
+    html = read_ui()
+    assert "inspectorSection.style.display = 'none'" in html
+    assert "per-sentence scores come from a single detector" in html
+    assert "Exploratory sentence pattern" in html
+
+
+def test_supplementary_metrics_are_labelled_non_authoritative():
+    html = read_ui()
+    assert "Burstiness (supplementary)" in html
+    assert "Predictability (supplementary)" in html
+    assert "do not determine AI authorship and do not control the Balanced outcome" in html
+
+
+def test_mode_verification_banner():
+    html = read_ui()
+    assert '"Running: " + friendly' in html
+    assert "Wrong detector mode is running. Close the existing Synthetix server and relaunch Balanced Review." in html
+    assert "expected_backend" in html

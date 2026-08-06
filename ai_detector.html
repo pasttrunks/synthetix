@@ -510,6 +510,35 @@
         .outcome-text {
             font-size: 0.9rem;
         }
+
+        .sentence-legend {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        .legend-swatch {
+            display: inline-block;
+            width: 0.8em;
+            height: 0.8em;
+            border-radius: 2px;
+            margin: 0 0.3em 0 1em;
+            vertical-align: middle;
+        }
+
+        .legend-high {
+            background: rgba(244, 63, 94, 0.55);
+        }
+
+        .legend-low {
+            background: transparent;
+            border: 1px solid var(--text-muted);
+        }
+
+        .sentence-caption {
+            margin-top: 0.3rem;
+            font-style: italic;
+        }
     </style>
 
 </head>
@@ -542,6 +571,9 @@
     </div>
     <div class="mode-notice" id="modeNotice"></div>
     <div class="error-box" id="errorBox" hidden></div>
+    <div class="error-box" id="modeMismatch" hidden>
+        Wrong detector mode is running. Close the existing Synthetix server and relaunch Balanced Review.
+    </div>
 
     <div class="main-grid">
         <div class="panel">
@@ -578,7 +610,7 @@
                 <button class="btn-sample" id="btnExport" onclick="exportReport()">Export Report</button>
             </div>
 
-            <div class="score-hero">
+            <div class="score-hero" id="scoreHero">
                 <div class="score-display">
                     <div class="score-number" id="aiScore">0%</div>
                     <div class="score-meta">Experimental AI-writing signal</div>
@@ -595,11 +627,15 @@
                     <div class="balanced-card">
                         <div class="balanced-card-title">HC3 Fast Baseline</div>
                         <div class="balanced-card-score" id="hc3Score">—</div>
+                        <div class="balanced-card-meta" id="hc3Threshold"></div>
+                        <div class="balanced-card-meta">Not a probability.</div>
                         <div class="balanced-card-meta" id="hc3Meta"></div>
                     </div>
                     <div class="balanced-card">
                         <div class="balanced-card-title">Desklib Academic Sensitive</div>
                         <div class="balanced-card-score" id="dkScore">—</div>
+                        <div class="balanced-card-meta" id="dkThreshold"></div>
+                        <div class="balanced-card-meta">Not a probability.</div>
                         <div class="balanced-card-meta" id="dkMeta"></div>
                     </div>
                 </div>
@@ -612,7 +648,7 @@
             <div class="metrics-stack">
                 <div class="metric-card">
                     <div class="metric-head">
-                        <span class="metric-title">Burstiness Score (CV)</span>
+                        <span class="metric-title">Burstiness (supplementary)</span>
                         <span class="metric-value" id="burstVal">0.00</span>
                     </div>
                     <div class="bar-container">
@@ -622,7 +658,7 @@
 
                 <div class="metric-card">
                     <div class="metric-head">
-                        <span class="metric-title">Predictability Index</span>
+                        <span class="metric-title">Predictability (supplementary)</span>
                         <span class="metric-value" id="predictVal">0.0%</span>
                     </div>
                     <div class="bar-container">
@@ -650,12 +686,25 @@
                     </div>
                 </div>
             </div>
-
-            <div class="panel-header" style="margin-top: 0.2rem;">
-                <span class="panel-title" style="font-size: 0.82rem;">Sentence Pattern Map</span>
+            <div class="backend-provenance" id="supplementaryNote">
+                These supplementary writing-pattern metrics do not determine AI authorship and do not control the Balanced outcome.
             </div>
-            <div class="inspector-box" id="inspectorMap">
-                <em>Sentence classification highlights will appear here...</em>
+
+            <div id="inspectorSection">
+                <div class="panel-header" style="margin-top: 0.2rem;">
+                    <span class="panel-title" style="font-size: 0.82rem;">Sentence Pattern Map</span>
+                </div>
+                <div class="inspector-box" id="inspectorMap">
+                    <em>Sentence classification highlights will appear here...</em>
+                </div>
+                <div class="sentence-legend" id="sentenceLegend">
+                    <span class="legend-swatch legend-high"></span> at/above 50 (threshold)
+                    <span class="legend-swatch legend-low"></span> below 50
+                    <div class="sentence-caption">Exploratory sentence pattern — not a sentence-level AI determination.</div>
+                </div>
+            </div>
+            <div class="backend-provenance" id="balancedSentenceNote" hidden>
+                Sentence-level pattern map is hidden in Balanced Review because per-sentence scores come from a single detector and cannot be attributed to both.
             </div>
         </div>
     </div>
@@ -668,6 +717,7 @@
 
     const API_URL = "/api/analyze";
     const HEALTH_URL = "/api/health";
+    const expectedBackend = new URLSearchParams(location.search).get("expected_backend");
 
     const textarea = document.getElementById('inputText');
     textarea.addEventListener('input', updateCounts);
@@ -701,6 +751,17 @@
             const res = await fetch(HEALTH_URL + "?t=" + Date.now());
             if (res.ok) {
                 const data = await res.json();
+                if (expectedBackend && data.backend_name && data.backend_name !== expectedBackend) {
+                    const mismatch = document.getElementById('modeMismatch');
+                    mismatch.textContent = "Wrong detector mode is running. Close the existing Synthetix server and relaunch Balanced Review.";
+                    mismatch.hidden = false;
+                    const grid = document.querySelector('.main-grid');
+                    if (grid) grid.style.display = 'none';
+                    statusText.textContent = "Wrong mode";
+                    statusDot.style.background = "var(--risk-high)";
+                    engineInfo.textContent = "Expected " + expectedBackend + " but /health reports " + data.backend_name;
+                    return;
+                }
                 renderBackendInfo(data);
                 statusText.textContent = data.model_loaded ? "Detector ready" : "Loading detector…";
                 statusDot.style.background = data.model_loaded ? "var(--risk-mid)" : "var(--risk-mid)";
@@ -722,9 +783,10 @@
             : b === "balanced_review"
                 ? "Experimental Comparison — two detectors with an uncertain outcome when they disagree"
                 : "Fast Baseline — faster, but frequently misses unfamiliar AI writing";
-        document.getElementById('modeName').textContent = friendly;
+        document.getElementById('modeName').textContent = "Running: " + friendly;
         document.getElementById('backendMeta').textContent =
             "backend: " + b +
+            " | port: " + (location.port || "80") +
             " | model: " + (data.model_name || "—") +
             " | revision: " + ((data.model_revision || "").slice(0, 7) || "—") +
             " | device: " + (data.inference_device || "—");
@@ -919,12 +981,20 @@
         }
 
         const balancedResults = document.getElementById('balancedResults');
+        const scoreHero = document.getElementById('scoreHero');
+        const inspectorSection = document.getElementById('inspectorSection');
+        const balancedSentenceNote = document.getElementById('balancedSentenceNote');
         if (balanced && balanced.review_outcome) {
             balancedResults.hidden = false;
+            scoreHero.style.display = 'none';
+            inspectorSection.style.display = 'none';
+            balancedSentenceNote.hidden = false;
             document.getElementById('hc3Score').textContent = balanced.hc3_score + '%';
+            document.getElementById('hc3Threshold').textContent = balanced.hc3_score >= 50 ? "At/above the 0.50 threshold" : "Below the 0.50 threshold";
             document.getElementById('hc3Meta').textContent =
                 balanced.hc3_backend_name + " | " + balanced.hc3_model_name + " | " + (balanced.hc3_model_revision || "").slice(0, 7);
             document.getElementById('dkScore').textContent = balanced.desklib_score + '%';
+            document.getElementById('dkThreshold').textContent = balanced.desklib_score >= 50 ? "At/above the 0.50 threshold" : "Below the 0.50 threshold";
             document.getElementById('dkMeta').textContent =
                 balanced.desklib_backend_name + " | " + balanced.desklib_model_name + " | " + (balanced.desklib_model_revision || "").slice(0, 7);
             const card = document.getElementById('outcomeCard');
@@ -932,19 +1002,22 @@
             const text = document.getElementById('outcomeText');
             if (balanced.review_outcome === "strong_ai_signal") {
                 card.className = "outcome-card outcome-strong";
-                title.textContent = "Strong agreement";
-                text.textContent = "Both detectors identified an elevated AI-writing signal. This is still not proof of AI authorship.";
+                title.textContent = "Both detectors found an elevated AI-writing signal. This is not proof that the text was AI-written.";
+                text.textContent = "";
             } else if (balanced.review_outcome === "low_ai_signal") {
                 card.className = "outcome-card outcome-low";
-                title.textContent = "Low agreement";
-                text.textContent = "Neither detector identified a strong AI-writing signal. This does not prove the text was written by a human.";
+                title.textContent = "Neither detector found an elevated AI-writing signal. This does not prove that the text was written by a human.";
+                text.textContent = "";
             } else {
                 card.className = "outcome-card outcome-neutral";
-                title.textContent = "Uncertain disagreement";
-                text.textContent = "The detectors disagree. No reliable classification can be made from this analysis.";
+                title.textContent = "The detectors disagree. This analysis is inconclusive.";
+                text.textContent = "";
             }
         } else {
             balancedResults.hidden = true;
+            scoreHero.style.display = '';
+            inspectorSection.style.display = '';
+            balancedSentenceNote.hidden = true;
         }
 
         const prov = document.getElementById('resultBackend');
@@ -989,7 +1062,7 @@
         if (sentences && Array.isArray(sentences)) {
             sentences.forEach(item => {
                 const span = document.createElement('span');
-                span.className = item.is_suspicious ? 'hl-ai' : 'hl-neutral';
+                span.className = (item.ai_score !== null && item.ai_score !== undefined && item.ai_score >= 50) ? 'hl-ai' : 'hl-neutral';
                 span.textContent = item.sentence + ' ';
                 map.appendChild(span);
             });

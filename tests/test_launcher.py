@@ -35,6 +35,61 @@ def test_health_url():
     assert mod.health_url(8000) == "http://127.0.0.1:8000/health"
 
 
+def test_dedicated_launcher_ports():
+    mod = load_launcher()
+    assert mod.DEFAULT_PORTS == {
+        "hc3_roberta": 8000,
+        "desklib_academic": 8001,
+        "balanced_review": 8002,
+    }
+    assert mod.resolve_port("hc3_roberta", None) == 8000
+    assert mod.resolve_port("desklib_academic", None) == 8001
+    assert mod.resolve_port("balanced_review", None) == 8002
+    assert mod.resolve_port("balanced_review", 9000) == 9000
+
+
+def test_readiness_requires_loaded_and_correct_backend():
+    mod = load_launcher()
+    assert mod.backend_ready({"backend_name": "hc3_roberta", "model_loaded": True}, "hc3_roberta") is True
+    assert mod.backend_ready({"backend_name": "hc3_roberta", "model_loaded": False}, "hc3_roberta") is False
+    assert mod.backend_ready({"backend_name": "balanced_review", "model_loaded": True}, "hc3_roberta") is False
+    assert mod.backend_ready(None, "hc3_roberta") is False
+
+
+def test_same_backend_reuse_works():
+    mod = load_launcher()
+    health = {"backend_name": "balanced_review", "model_loaded": True}
+    assert mod.classify_existing(health, "balanced_review") == "reuse"
+    assert mod.classify_existing(health, "hc3_roberta") == "conflict"
+
+
+def test_balanced_launcher_does_not_reuse_hc3():
+    mod = load_launcher()
+    hc3_health = {"backend_name": "hc3_roberta", "model_loaded": True}
+    assert mod.classify_existing(hc3_health, "balanced_review") == "conflict"
+
+
+def test_academic_launcher_does_not_reuse_hc3():
+    mod = load_launcher()
+    hc3_health = {"backend_name": "hc3_roberta", "model_loaded": True}
+    assert mod.classify_existing(hc3_health, "desklib_academic") == "conflict"
+
+
+def test_wrong_backend_health_never_opens_browser():
+    # classify_existing returns 'conflict' for a wrong backend; the launcher
+    # exits before any webbrowser.open call in that branch.
+    mod = load_launcher()
+    wrong = {"backend_name": "hc3_roberta", "model_loaded": True}
+    assert mod.classify_existing(wrong, "balanced_review") == "conflict"
+    assert mod.classify_existing(wrong, "balanced_review") != "reuse"
+
+
+def test_unrelated_or_unreachable_port_means_launch():
+    mod = load_launcher()
+    assert mod.classify_existing(None, "hc3_roberta") == "launch"
+    assert mod.classify_existing({"model_loaded": True}, "hc3_roberta") == "launch"
+
+
 def test_windows_launchers_pass_correct_backend():
     start = (ROOT / "Start Synthetix.cmd").read_text(encoding="utf-8")
     fast = (ROOT / "Start Synthetix Fast.cmd").read_text(encoding="utf-8")
@@ -68,10 +123,13 @@ def test_ui_backend_banner_notices_and_states():
         "This mode may fail to identify AI-generated text outside its training distribution.",
         "This mode runs two detectors. When they disagree, the result is uncertain and no classification is made.",
         "Experimental Comparison — two detectors with an uncertain outcome when they disagree",
-        "Strong agreement",
-        "Low agreement",
-        "Uncertain disagreement",
-        "The detectors disagree. No reliable classification can be made from this analysis.",
+        "Running: ",
+        "Both detectors found an elevated AI-writing signal. This is not proof that the text was AI-written.",
+        "Neither detector found an elevated AI-writing signal. This does not prove that the text was written by a human.",
+        "The detectors disagree. This analysis is inconclusive.",
+        "Wrong detector mode is running. Close the existing Synthetix server and relaunch Balanced Review.",
+        "At/above the 0.50 threshold",
+        "Not a probability.",
         "Upload Document",
         "Cancel",
         "backendBanner",
