@@ -1,0 +1,59 @@
+{
+  "title": "Synthetix Pilot v0 Evaluation Report",
+  "disclaimer": "Pilot v0 compares mixed public-domain Gutenberg passages against GPT-2-small output and is not evidence of modern AI-detection accuracy.",
+  "timestamp": "2026-08-06T14:35:57.239113+00:00",
+  "application_commit_sha": "869ff94aa19911bc97b213c4e980084ae2a1d578",
+  "detector": {
+    "model_name": "Hello-SimpleAI/chatgpt-detector-roberta",
+    "model_revision": "d2b342c61775d5dd0221808a79983ed3b86ffd86",
+    "tokenizer_revision": "d2b342c61775d5dd0221808a79983ed3b86ffd86"
+  },
+  "pilot_files": {
+    "human_pilot.jsonl": {
+      "rows": 50,
+      "sha256": "820e33ad4ccedf9643d4950a8007db542dc2e888499c65264632c35b1bc72acb"
+    },
+    "ai_pilot.jsonl": {
+      "rows": 50,
+      "sha256": "6db639d51953f17c8d1a44506416bb2ede9e11d27b018397d92d197d7e06db6a"
+    }
+  },
+  "validation": {
+    "total_rows": 100,
+    "unique_sample_ids": 100,
+    "duplicate_sample_ids": [],
+    "label_counts": {
+      "0": 50,
+      "1": 50
+    },
+    "unique_content_hashes": 100,
+    "duplicate_content_hashes": [],
+    "hash_mismatches": []
+  },
+  "evaluation": {
+    "api_url": "http://127.0.0.1:8000/api/analyze",
+    "threshold": 0.5,
+    "total_samples": 100,
+    "evaluated": 100,
+    "abstentions": 0,
+    "errors": 0,
+    "coverage_pct": 100.0
+  },
+  "metrics": {
+    "auroc": 0.381,
+    "auprc": 0.4925,
+    "brier_score": 0.4999,
+    "ece": 0.4996,
+    "confusion_matrix": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 50,
+      "fn": 50
+    },
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "accuracy": 0.5,
+    "fpr": 0.0
+  }
+}
