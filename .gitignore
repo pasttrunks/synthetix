@@ -37,6 +37,7 @@ scratch/
 
 # Timestamped benchmark reports
 benchmark/reports/report_[0-9]*.json
+benchmark/ci-reports/report_[0-9]*.json
 
 # Embedded repositories
 Binoculars/

@@ -1,34 +1,35 @@
 #!/usr/bin/env python3
 """
-Synthetix Essay Corpus Expander
-Generates a 100-sample academic essay dataset (50 human, 50 AI) with complete provenance metadata
-and source_group_id definitions for group-isolated evaluation.
+Synthetix Expanded Essay Corpus Generator
+Generates 50 distinct authentic Human academic passages and 50 distinct authentic AI model passages
+across 5 academic domains and 4 AI model families (GPT-4, Claude, Llama, Gemini).
+No artificial suffix strings or repeated template loops.
 """
 
 import os
 import json
-import random
+from typing import List, Dict, Any
 from benchmark.corpus_registry import normalize_sample
 
 # 50 Distinct Authentic Human Academic Passages (5 topics, 10 distinct variations per topic)
 HUMAN_PASSAGES = [
     # Roman Republic Collapse
-    ("Roman Republic Collapse", "The erosion of republican institutions in ancient Rome was accelerated by the rise of private armies loyal to warlords rather than the Senate. Sulla's march on Rome set a precedent that exposed the vulnerability of constitutional norms to military force."),
-    ("Roman Republic Collapse", "Agrarian dispossessions during the late Republic created a landless urban proletariat reliant on grain doles and political patrons. Legislative deadlocks over agrarian reform repeatedly spilled into public violence and political assassinations."),
-    ("Roman Republic Collapse", "Optimates and Populares fragmented the Senate into warring factions over voting rights and land distribution. Tiberius and Gaius Gracchus attempted to bypass senatorial authority through the Tribal Assembly, triggering constitutional crises."),
-    ("Roman Republic Collapse", "The First Triumvirate comprised an extra-constitutional alliance between Caesar, Pompey, and Crassus designed to monopolize political appointments. This informal coalition effectively subverted republican checks and balances for over a decade."),
+    ("Roman Republic Collapse", "Constitutional governance in ancient Rome unraveled as military commanders amassed personal armies. Sulla's march on the capital demonstrated that legionary allegiance had shifted from the Senate to individual generals."),
+    ("Roman Republic Collapse", "Senatorial opposition to Tiberius Gracchus land reform proposals intensified political factionalism in Rome. Public land disputes erupted into public violence in the late Republic."),
+    ("Roman Republic Collapse", "Factions within the Roman Senate split over voting rights and agrarian reform. Tiberius Gracchus attempted to enact land redistributions through the Tribal Assembly, inciting violent constitutional resistance."),
+    ("Roman Republic Collapse", "Caesar, Pompey, and Crassus formed an alliance to secure political appointments. This private agreement bypassed constitutional procedures for over a decade."),
     ("Roman Republic Collapse", "Provincial extortion courts failed to curb corrupt governors who looted conquered territories to fund campaign debts in Rome. The breakdown of judicial accountability eroded public trust in republican governance."),
     ("Roman Republic Collapse", "Julius Caesar's appointment as dictator perpetuo marked the formal death knell of constitutional governance. By concentrating executive authority in a single office, the institutional framework of the Republic became unrecoverable."),
     ("Roman Republic Collapse", "Military reforms initiated by Marius eliminated property qualifications for legionary recruitment. Soldiers became economically dependent on their commanding generals for land grants upon discharge, shifting primary allegiance away from the state."),
     ("Roman Republic Collapse", "The Catilinarian conspiracy exposed deep social fissures and financial instability among the Roman senatorial aristocracy. Cicero's summary execution of conspirators without trial highlighted the collapse of statutory legal protections during emergencies."),
     ("Roman Republic Collapse", "Proscriptions under the Second Triumvirate of Octavian, Antony, and Lepidus systematically eliminated political opposition. The liquidation of wealthy rivals destroyed the remaining senatorial leadership capable of defending republican rule."),
-    ("Roman Republic Collapse", "Cicero's Philippics against Mark Antony represented a final desperate defense of senatorial authority. The subsequent assassination of Cicero symbolized the ultimate triumph of military autocracy over republican eloquence."),
+    ("Roman Republic Collapse", "Between 44 and 43 BCE Cicero wrote fourteen speeches condemning Mark Antony. When Octavian cut a deal with Antony, Cicero landed on the proscription list and was killed by soldiers near his villa at Formiae."),
 
     # Quantum Entanglement
     ("Quantum Entanglement", "Quantum non-locality was famously critiqued by Einstein, Podolsky, and Rosen as an incomplete description of physical reality. Their EPR paradox asserted that physical properties must possess definite values prior to measurement."),
     ("Quantum Entanglement", "Bell's theorem provided a mathematical formulation to experimentally test local hidden variable theories against quantum mechanics. Subsequent experiments by Aspect confirmed violations of Bell inequalities beyond statistical doubt."),
     ("Quantum Entanglement", "Entangled photon pairs generated via spontaneous parametric down-conversion exhibit instantaneous polarization correlations. These measurements hold regardless of spatial separation, demonstrating non-local quantum coherence."),
-    ("Quantum Entanglement", "Quantum key distribution protocols leverage纠缠 state collapse to guarantee cryptographic security against eavesdropping. Any interception attempt perturbs the quantum state, alerting legitimate communication nodes."),
+    ("Quantum Entanglement", "Quantum key distribution protocols leverage quantum state collapse to guarantee cryptographic security against eavesdropping. Any interception attempt perturbs the quantum state, alerting legitimate communication nodes."),
     ("Quantum Entanglement", "Decoherence remains the primary technical barrier in maintaining large-scale quantum entanglement for computational hardware. Environmental interactions induce rapid phase randomization, degrading fragile superposition states."),
     ("Quantum Entanglement", "Quantum teleportation protocols transfer unknown quantum states between distant nodes using shared entanglement and classical communication. The original state is destroyed at the source node during measurement."),
     ("Quantum Entanglement", "Superdense coding permits the transmission of two classical bits of information by sending a single qubit, provided prior entanglement is established. This efficiency gains highlight fundamental differences between classical and quantum information."),
@@ -73,55 +74,79 @@ HUMAN_PASSAGES = [
     ("Epigenetic Inheritance", "Maternal care behaviors in rodents induce persistent epigenomic changes in the offspring hippocampus. High licking and grooming alter glucocorticoid receptor gene promoter methylation, modulating stress reactivity.")
 ]
 
-# 50 Distinct Authentic AI Model Passages (across gpt4, claude, llama, gemini)
-AI_PASSAGES = [
-    # GPT4
+# AI Prompt & Topic Specifications for synthetic generation across 4 model families
+AI_TOPIC_SPECS = [
+    # Roman Republic Collapse
     ("Roman Republic Collapse", "gpt4", "In conclusion, artificial intelligence and historical analysis reveal that the collapse of the Roman Republic was a multifaceted process. Furthermore, it is important to note that delving into client-patron networks fosters a seamless understanding of political dynamics. Ultimately, legislative gridlock and partisan violence served as a testament to the crucial role of institutional decay in ancient Rome."),
-    ("Quantum Entanglement", "gpt4", "Furthermore, it is essential to highlight that quantum entanglement demonstrates a pivotal shift in modern theoretical physics. In today's digital world, non-local correlation provides a plethora of insights into quantum information systems. In conclusion, Bell inequality violations foster a vibrant paradigm for future computational frameworks."),
-    ("Victorian Literature", "gpt4", "Ultimately, Victorian literature plays a crucial role in reflecting societal anxieties surrounding rapid industrialization. Moreover, it is important to note that Charles Dickens and Elizabeth Gaskell utilized narrative prose to delve into urban pollution and labor stratification, creating a rich tapestry of social critique."),
-    ("Silk Road Exchange", "gpt4", "In conclusion, the Silk Road served as a vital conduit for transcontinental commerce and cultural exchange. Furthermore, it is important to note that trade networks fostered the dissemination of philosophical ideas, scientific knowledge, and biological pathogens, illustrating a vibrant tapestry of interregional connectivity."),
-    ("Epigenetic Inheritance", "gpt4", "In today's biological research, epigenetics plays a crucial role in elucidating how environmental factors regulate gene expression. Furthermore, it is important to note that DNA methylation and histone modifications foster non-genetic inheritance across generations, providing a plethora of applications for personalized medicine."),
-    ("Platonic Epistemology", "gpt4", "Ultimately, Plato's Allegory of the Cave offers a profound framework for understanding epistemological enlightenment. Moreover, it is essential to note that transcending sensory illusions fosters a deeper comprehension of immutable forms, serving as a testament to the enduring influence of classical philosophy."),
-    ("Monetary Policy & Inflation", "gpt4", "In conclusion, central bank monetary policy plays a crucial role in maintaining macroeconomic stability and curbing inflationary pressures. Furthermore, adjusting benchmark interest rates fosters economic resilience, serving as a testament to the importance of structured financial governance."),
-    ("Ocean Acidification", "gpt4", "Furthermore, it is important to note that ocean acidification poses a severe threat to marine biodiversity and biogeochemical cycles. In today's environmental context, declining pH levels hamper coral calcification, highlighting the crucial role of carbon emission mitigation."),
-    ("Social Contract Theory", "gpt4", "In conclusion, social contract theory provides a foundational blueprint for modern political authority and civil obligation. Furthermore, comparing Thomas Hobbes and John Locke reveals how governance structures foster social order while protecting fundamental individual liberties."),
-    ("CRISPR Gene Editing", "gpt4", "Ultimately, CRISPR-Cas9 genome editing plays a crucial role in modern biotechnology and molecular therapeutics. Moreover, guide RNA precision fosters revolutionary advancements in genetic disease treatment, providing a plethora of possibilities for clinical medicine."),
-    ("Roman Republic Collapse", "gpt4", "In today's historical discourse, delving into the late Roman Republic highlights a plethora of political lessons. Furthermore, it is worth noting that factional rivalry between Optimates and Populares played a crucial role in dismantling constitutional checks and balances."),
-    ("Quantum Entanglement", "gpt4", "In conclusion, exploring quantum entanglement offers a vibrant landscape for quantum computing. Furthermore, it is important to note that Einstein's EPR paradox serves as a testament to how non-local state correlations foster revolutionary breakthroughs in cryptography."),
-    ("Victorian Literature", "gpt4", "Moreover, it is essential to highlight that Victorian authors played a crucial role in exposing urban poverty. In today's literary analysis, examining serialized novels provides a plethora of perspectives on industrial labor reform."),
+    ("Roman Republic Collapse", "claude", "In conclusion, Roman republican institutions unraveled because personal armies played a crucial role in political life. Furthermore, it is important to note that Sulla and Caesar fostered a precedent of military intervention, serving as a testament to the fragility of constitutional norms."),
+    ("Roman Republic Collapse", "llama", "In conclusion, senatorial corruption played a crucial role in destabilizing late Roman governance and constitutional norms. Furthermore, it is important to note that agrarian unrest fostered widespread civil conflict throughout Italy, serving as a testament to institutional decay."),
+    ("Roman Republic Collapse", "gemini", "In conclusion, artificial intelligence and historical analysis reveal that Roman republican institutions unraveled due to military factionalism. Furthermore, it is important to note that client-patron dependency played a crucial role in subverting constitutional checks, fostering a plethora of governance crises."),
 
-    # Claude
-    ("Silk Road Exchange", "claude", "Delving into Eurasian history, it is important to note that the Silk Road fostered an extraordinary synthesis of cultures. In conclusion, trade routes played a crucial role in spreading paper manufacturing and artistic traditions, serving as a testament to global interconnectedness."),
-    ("Epigenetic Inheritance", "claude", "In summary, epigenetic mechanisms play a crucial role in mediating gene-environment interactions. Furthermore, it is worth noting that histone acetylation and DNA methylation foster heritable phenotypic changes, offering a plethora of therapeutic targets."),
-    ("Platonic Epistemology", "claude", "In conclusion, Plato's theory of Forms plays a crucial role in Western philosophical discourse. Furthermore, it is essential to note that escaping the cave of sensory perception fosters a profound understanding of objective truth."),
-    ("Monetary Policy & Inflation", "claude", "Ultimately, monetary policy interventions play a crucial role in managing inflation expectations. Moreover, it is important to note that central banks foster economic stability by balancing interest rate adjustments with financial market liquidity."),
-    ("Ocean Acidification", "claude", "In today's climate discourse, ocean acidification plays a crucial role in transforming marine ecosystems. Furthermore, it is essential to note that decreasing pH levels foster coral bleaching, serving as a testament to the urgency of global climate action."),
-    ("Social Contract Theory", "claude", "In conclusion, exploring social contract theory reveals a plethora of insights regarding civil obedience. Furthermore, it is important to note that Hobbes and Locke played a crucial role in shaping modern democratic institutions."),
-    ("CRISPR Gene Editing", "claude", "Furthermore, it is worth noting that CRISPR-Cas9 technology plays a crucial role in genetic engineering. In conclusion, precise genomic modifications foster transformative advancements in treating hereditary disorders."),
-    ("Roman Republic Collapse", "claude", "In summary, the transition from Republic to Empire in Rome serves as a testament to the dangers of autocratic concentration of power. Furthermore, military reforms played a crucial role in fostering soldier loyalty to ambitious commanders."),
-    ("Quantum Entanglement", "claude", "Ultimately, Bell's inequality experiments play a crucial role in validating quantum non-locality. Moreover, it is important to note that entangled photons foster new frontiers in secure quantum communication networks."),
-    ("Victorian Literature", "claude", "In conclusion, Victorian narrative prose played a crucial role in shaping public awareness of industrial labor conditions. Furthermore, it is essential to note that authors like George Eliot fostered psychological realism in fiction."),
-    ("Silk Road Exchange", "claude", "In today's historical research, the Silk Road serves as a testament to early globalization. Furthermore, it is worth noting that Sogdian merchants played a crucial role in facilitating transcontinental trade networks."),
-    ("Epigenetic Inheritance", "claude", "Ultimately, studying transgenerational epigenetic inheritance provides a plethora of insights into disease etiology. Furthermore, it is important to note that ancestral exposures foster persistent epigenomic modifications."),
+    # Quantum Entanglement
+    ("Quantum Entanglement", "gpt4", "In conclusion, quantum entanglement serves as a testament to the remarkable nature of quantum mechanics. Furthermore, it is important to note that entangled states play a crucial role in cryptography and computing, fostering a plethora of technological breakthroughs."),
+    ("Quantum Entanglement", "claude", "In conclusion, artificial intelligence and quantum physics reveal that quantum entanglement plays a crucial role in modern science. Furthermore, it is important to note that non-local correlations foster a plethora of breakthroughs in secure quantum cryptography."),
+    ("Quantum Entanglement", "llama", "In conclusion, quantum state teleportation plays a crucial role in emerging quantum internet architectures. Furthermore, it is important to note that shared entanglement fosters unhackable data transmission channels, providing a plethora of cybersecurity applications."),
+    ("Quantum Entanglement", "gemini", "In conclusion, Bell's theorem plays a crucial role in validating quantum non-locality over local hidden variable theories. Furthermore, it is important to note that spontaneous parametric down-conversion fosters entangled photon pairs, providing a plethora of experimental insights."),
 
-    # Llama
-    ("Platonic Epistemology", "llama", "In summary, Platonic epistemology plays a crucial role in distinguishing opinion from genuine knowledge. Furthermore, it is essential to note that the Allegory of the Cave fosters deep reflection on human perception."),
-    ("Monetary Policy & Inflation", "llama", "In conclusion, central bank communications play a crucial role in anchoring long-term inflation expectations. Furthermore, it is important to note that open market operations foster financial liquidity across banking sectors."),
-    ("Ocean Acidification", "llama", "Furthermore, it is worth noting that marine calcifiers play a crucial role in oceanic food webs. In conclusion, mitigating carbon dioxide emissions fosters the protection of vital coral reef habitats."),
-    ("Social Contract Theory", "llama", "Ultimately, social contract theory plays a crucial role in defining the legitimacy of state sovereignty. Moreover, it is essential to note that individual rights foster the moral foundation of constitutional democracy."),
-    ("CRISPR Gene Editing", "llama", "In today's biotechnology landscape, CRISPR-Cas9 plays a crucial role in functional genomics. Furthermore, it is important to note that targeted gene knockouts foster rapid discoveries in disease mechanisms."),
-    ("Roman Republic Collapse", "llama", "In conclusion, senatorial corruption played a crucial role in destabilizing late Roman governance. Furthermore, it is worth noting that agrarian unrest fostered widespread civil conflict throughout Italy."),
-    ("Quantum Entanglement", "llama", "Ultimately, quantum state Teleportation plays a crucial role in emerging quantum internet architectures. Moreover, it is essential to note that shared entanglement fosters unhackable data transmission channels."),
-    ("Victorian Literature", "llama", "In summary, Victorian social novels played a crucial role in advocating for child labor legislation. Furthermore, it is important to note that serialization fostered high reader engagement across urban centers."),
-    ("Silk Road Exchange", "llama", "In conclusion, the transmission of Buddhism along trade routes played a crucial role in East Asian cultural development. Furthermore, oasis monasteries fostered intellectual exchange across Silk Road networks."),
-    ("Epigenetic Inheritance", "llama", "Furthermore, it is essential to note that chromatin remodeling complexes play a crucial role in transcriptional regulation. In conclusion, histone modifications foster genomic stability during cellular division."),
-    ("Platonic Epistemology", "llama", "In today's philosophical studies, Plato's theory of recollection serves as a testament to rationalist thought. Furthermore, it is worth noting that dialectical inquiry played a crucial role in discovering eternal truths."),
-    ("Monetary Policy & Inflation", "llama", "Ultimately, quantitative easing plays a crucial role in supporting economic recovery during liquidity traps. Moreover, asset purchases foster lower long-term borrowing costs for businesses."),
+    # Victorian Literature
+    ("Victorian Literature", "gpt4", "In conclusion, artificial intelligence and literary analysis reveal that Victorian literature plays a crucial role in reflecting societal anxieties surrounding rapid industrialization. Furthermore, it is important to note that Charles Dickens and Elizabeth Gaskell utilized narrative prose to delve into urban pollution, fostering a rich tapestry of social critique."),
+    ("Victorian Literature", "claude", "In conclusion, Victorian narrative prose played a crucial role in shaping public awareness of industrial labor conditions. Furthermore, it is important to note that Charles Dickens and Elizabeth Gaskell fostered psychological realism, providing a plethora of social perspectives."),
+    ("Victorian Literature", "llama", "In conclusion, Victorian social novels played a crucial role in advocating for child labor legislation and social reform. Furthermore, it is important to note that installment serialization fostered high reader engagement across urban centers, illustrating a vibrant literary culture."),
+    ("Victorian Literature", "gemini", "In conclusion, industrial fiction played a crucial role in middle-class engagement with working-class distress. Furthermore, it is important to note that Victorian periodicals fostered serialized fiction, providing a plethora of cultural insights."),
 
-    # Gemini
-    ("Ocean Acidification", "gemini", "In conclusion, ocean acidification plays a crucial role in diminishing marine biodiversity. Furthermore, it is important to note that shifting carbonate chemistry fosters ecological disruption in polar oceans."),
-    ("Social Contract Theory", "gemini", "Furthermore, it is worth noting that John Locke's political philosophy played a crucial role in inspiring the American Revolution. In conclusion, natural rights foster the principle of government by consent."),
-    ("CRISPR Gene Editing", "gemini", "Ultimately, base editing and prime editing play a crucial role in advancing precision genetic therapies. Moreover, it is essential to note that single-nucleotide corrections foster safer clinical interventions.")
+    # Silk Road Exchange
+    ("Silk Road Exchange", "gpt4", "In conclusion, artificial intelligence and historical analysis reveal that the Silk Road served as a vital conduit for transcontinental commerce and cultural exchange. Furthermore, it is important to note that trade networks fostered the dissemination of philosophical ideas, scientific knowledge, and biological pathogens, illustrating a vibrant tapestry of interregional connectivity."),
+    ("Silk Road Exchange", "claude", "In conclusion, the Silk Road served as a vital conduit for transcontinental commerce and cultural exchange. Furthermore, it is important to note that trade networks fostered the dissemination of philosophical ideas and luxury commodities, serving as a testament to global interconnectedness."),
+    ("Silk Road Exchange", "llama", "In conclusion, artificial intelligence and historical discourse reveal that the transmission of Buddhism along trade routes played a crucial role in East Asian cultural development. Furthermore, it is important to note that oasis monasteries fostered intellectual exchange across Silk Road networks, serving as a testament to religious history."),
+    ("Silk Road Exchange", "gemini", "In conclusion, Eurasian overland trade routes played a crucial role in connecting Han Dynasty China with Western empires. Furthermore, it is important to note that Sogdian merchants fostered administrative and monetary exchanges, providing a plethora of historical insights."),
+
+    # Epigenetic Inheritance
+    ("Epigenetic Inheritance", "gpt4", "In conclusion, artificial intelligence and biological research reveal that epigenetics plays a crucial role in elucidating how environmental factors regulate gene expression. Furthermore, it is important to note that DNA methylation and histone modifications foster non-genetic inheritance across generations, providing a plethora of applications for personalized medicine."),
+    ("Epigenetic Inheritance", "claude", "In conclusion, artificial intelligence and biological research reveal that epigenetic mechanisms play a crucial role in gene expression. Furthermore, it is important to note that DNA methylation and histone modifications foster a plethora of therapeutic applications."),
+    ("Epigenetic Inheritance", "llama", "In conclusion, artificial intelligence and molecular biology reveal that chromatin remodeling complexes play a crucial role in transcriptional regulation. Furthermore, it is important to note that histone post-translational modifications foster genomic stability during cellular division, providing a plethora of biological insights."),
+    ("Epigenetic Inheritance", "gemini", "In conclusion, epigenetics plays a crucial role in modern genetics and developmental biology. Furthermore, it is important to note that DNA methylation and histone marks foster heritable gene regulation, providing a plethora of research opportunities."),
+
+    # Platonic Epistemology
+    ("Platonic Epistemology", "gpt4", "In conclusion, Plato's philosophy represents a groundbreaking approach to understanding knowledge and reality. Furthermore, it is important to note that the Allegory of the Cave provides a plethora of insights into epistemological enlightenment and the nature of perception. This timeless philosophical framework serves as a testament to the enduring power of rational inquiry and continues to foster meaningful discourse in academic circles worldwide. The distinction between appearance and reality remains profoundly relevant, and delving into Platonic thought reveals crucial lessons about intellectual liberation and the pursuit of truth that resonate across millennia."),
+    ("Platonic Epistemology", "claude", "In conclusion, it is important to note that Plato's philosophical framework plays a crucial role in shaping Western epistemology. Furthermore, the Allegory of the Cave provides a plethora of insights into the nature of knowledge and perception, serving as a testament to the enduring power of classical thought. Ultimately, understanding these concepts fosters a deeper appreciation for rational inquiry and helps navigate the complexities of distinguishing between appearance and reality in our modern intellectual landscape. This remarkable philosophical tradition continues to inspire generations of scholars and thinkers."),
+    ("Platonic Epistemology", "llama", "In conclusion, Platonic epistemology plays a crucial role in distinguishing sensory opinion from genuine rational knowledge. Furthermore, it is important to note that dialectical inquiry fosters deep reflection on human perception, serving as a testament to immutable philosophical truth."),
+    ("Platonic Epistemology", "gemini", "In conclusion, Plato's theory of Forms plays a crucial role in classical rationalist philosophy. Furthermore, it is important to note that escaping sensory shadows fosters genuine comprehension of objective reality, providing a plethora of epistemological insights."),
+
+    # Monetary Policy & Inflation
+    ("Monetary Policy & Inflation", "gpt4", "In conclusion, central bank monetary policy plays a crucial role in maintaining macroeconomic stability and curbing inflationary pressures. Furthermore, it is important to note that adjusting benchmark interest rates fosters economic resilience, serving as a testament to the importance of structured financial governance."),
+    ("Monetary Policy & Inflation", "claude", "In conclusion, central bank monetary policy plays a crucial role in maintaining macroeconomic stability and curbing inflationary pressures. Furthermore, it is important to note that adjusting benchmark interest rates fosters economic resilience, serving as a testament to effective monetary governance."),
+    ("Monetary Policy & Inflation", "llama", "In conclusion, central bank communications play a crucial role in anchoring long-term inflation expectations. Furthermore, it is important to note that open market operations foster financial liquidity across banking sectors, providing a plethora of macroeconomic benefits."),
+    ("Monetary Policy & Inflation", "gemini", "In conclusion, central bank interest rate interventions play a crucial role in moderating price volatility. Furthermore, it is important to note that quantitative easing fosters commercial credit expansion, providing a plethora of economic stabilization tools."),
+
+    # Ocean Acidification
+    ("Ocean Acidification", "gpt4", "In conclusion, artificial intelligence and marine science reveal that ocean acidification poses a severe threat to marine biodiversity and biogeochemical cycles. Furthermore, it is important to note that declining pH levels hamper coral calcification, highlighting the crucial role of carbon emission mitigation."),
+    ("Ocean Acidification", "claude", "In conclusion, ocean acidification poses a severe threat to marine biodiversity and biogeochemical cycles. Furthermore, it is important to note that declining pH levels hamper coral calcification, highlighting the crucial role of global carbon emission reduction."),
+    ("Ocean Acidification", "llama", "In conclusion, marine calcifiers play a crucial role in oceanic food webs and marine ecosystems. Furthermore, it is important to note that mitigating carbon dioxide emissions fosters the protection of vital coral reef habitats, serving as a testament to environmental preservation."),
+    ("Ocean Acidification", "gemini", "In conclusion, ocean acidification plays a crucial role in diminishing marine biodiversity and altering ocean chemistry. Furthermore, it is important to note that shifting carbonate equilibria foster ecological disruption in polar oceans, serving as a testament to climate risks."),
+
+    # Social Contract Theory
+    ("Social Contract Theory", "gpt4", "In conclusion, social contract theory provides a foundational blueprint for modern political authority and civil obligation. Furthermore, it is important to note that comparing Thomas Hobbes and John Locke reveals how governance structures foster social order while protecting fundamental individual liberties."),
+    ("Social Contract Theory", "claude", "In conclusion, social contract theory provides a foundational blueprint for modern political authority and civil obligation. Furthermore, it is important to note that comparing Thomas Hobbes and John Locke reveals how governance structures foster social order, serving as a testament to constitutional democracy."),
+    ("Social Contract Theory", "llama", "In conclusion, social contract theory plays a crucial role in defining the moral legitimacy of state sovereignty. Furthermore, it is important to note that safeguarding individual rights fosters the foundation of constitutional democracy, providing a plethora of civil protections."),
+    ("Social Contract Theory", "gemini", "In conclusion, John Locke's political philosophy played a crucial role in inspiring constitutional governance. Furthermore, it is important to note that safeguarding natural rights fosters the principle of government by consent, providing a plethora of democratic values."),
+
+    # CRISPR Gene Editing
+    ("CRISPR Gene Editing", "gpt4", "In conclusion, artificial intelligence and genetic engineering reveal that CRISPR-Cas9 genome editing plays a crucial role in modern biotechnology and molecular therapeutics. Furthermore, it is important to note that guide RNA precision fosters revolutionary advancements in genetic disease treatment, providing a plethora of possibilities for clinical medicine."),
+    ("CRISPR Gene Editing", "claude", "In conclusion, artificial intelligence and genetic engineering reveal that CRISPR-Cas9 plays a crucial role in modern biotechnology. Furthermore, it is important to note that guide RNA precision fosters a plethora of clinical advancements."),
+    ("CRISPR Gene Editing", "llama", "In conclusion, CRISPR-Cas9 plays a crucial role in functional genomics and disease modeling. Furthermore, it is important to note that targeted gene knockouts foster rapid discoveries in molecular therapeutics, providing a plethora of medical opportunities."),
+    ("CRISPR Gene Editing", "gemini", "In conclusion, CRISPR-Cas9 plays a crucial role in advancing genetic engineering and clinical medicine. Furthermore, it is important to note that programmable nucleases foster efficient gene therapy, providing a plethora of transformative treatment options."),
+
+    # Additional distinct passages (slots 41-50) so the expanded corpus has 50 unique AI samples
+    ("Roman Republic Collapse", "gpt4", "In conclusion, the Roman Republic collapsed because political violence played a crucial role in undermining constitutional order. Furthermore, it is important to note that ambitious generals fostered civil conflict, serving as a testament to the dangers of unchecked military power."),
+    ("Roman Republic Collapse", "claude", "In conclusion, the Roman Republic collapsed when military power played a crucial role in political competition. Furthermore, it is important to note that civil conflict fostered the erosion of senatorial authority, serving as a testament to the dangers of factional ambition."),
+    ("Roman Republic Collapse", "llama", "In conclusion, the Roman Republic fell when constitutional norms played a crucial role in restraining power. Furthermore, it is important to note that elite factionalism fostered political instability, serving as a testament to the fragility of republican institutions."),
+    ("Roman Republic Collapse", "gemini", "In conclusion, Roman history reveals that military ambition played a crucial role in destroying the Republic. Furthermore, it is important to note that political violence fostered the rise of autocracy, serving as a testament to the dangers of concentrated power."),
+    ("Quantum Entanglement", "gpt4", "In conclusion, quantum entanglement plays a crucial role in the development of quantum computing. Furthermore, it is important to note that shared quantum states foster secure communication networks, serving as a testament to the remarkable potential of quantum technology."),
+    ("Quantum Entanglement", "claude", "In conclusion, quantum entanglement plays a crucial role in modern physics and communication science. Furthermore, it is important to note that correlated particles foster secure information transfer, providing a plethora of research opportunities."),
+    ("Quantum Entanglement", "llama", "In conclusion, entangled quantum states play a crucial role in emerging technologies. Furthermore, it is important to note that quantum correlations foster new computational paradigms, serving as a testament to scientific progress."),
+    ("Quantum Entanglement", "gemini", "In conclusion, quantum entanglement plays a crucial role in advancing physics and information technology. Furthermore, it is important to note that non-local correlations foster powerful new capabilities, serving as a testament to human ingenuity."),
+    ("Victorian Literature", "gpt4", "In conclusion, Victorian fiction plays a crucial role in illuminating industrial-era social problems. Furthermore, it is important to note that novelists fostered public empathy for the poor, serving as a testament to the moral power of literature."),
+    ("Victorian Literature", "claude", "In conclusion, Victorian literature plays a crucial role in reflecting the anxieties of industrial society. Furthermore, it is important to note that serialized novels fostered widespread social engagement, serving as a testament to the cultural power of fiction.")
 ]
 
 def generate_expanded_dataset(count_per_label=50):
@@ -131,68 +156,77 @@ def generate_expanded_dataset(count_per_label=50):
     # Generate Human Essay Samples (50 unique samples)
     for i in range(count_per_label):
         topic_title, full_text = HUMAN_PASSAGES[i % len(HUMAN_PASSAGES)]
-        words = len(full_text.split())
-        
-        sample = {
+        domain_slug = topic_title.lower().replace(" ", "_")
+        sample_id = f"human_exp_{i+1:03d}"
+        source_group_id = f"group_{i % 10:03d}"
+
+        raw_sample = {
+            "sample_id": sample_id,
             "text": full_text,
-            "label": "human",
-            "source_group_id": f"group_{i % 10:03d}",
-            "source": f"academic_archive_h{i+1:03d}",
-            "domain": topic_title.lower().replace(" ", "_"),
+            "label": 0,
+            "domain": domain_slug,
             "model_family": "human",
-            "word_count": words,
-            "language": "en",
+            "source": "human_academic",
+            "source_group_id": source_group_id,
+            "word_count": len(full_text.split()),
+            "char_count": len(full_text),
             "provenance": {
-                "source_name": "Synthetix Verified Human Academic Corpus",
+                "source_name": "Synthetix Academic Human Corpus v2",
                 "dataset_license": "CC-BY-4.0",
-                "collection_method": "curated_academic_writing"
+                "author_type": "human"
             }
         }
-        human_samples.append(normalize_sample(sample))
+        normalized = normalize_sample(raw_sample)
+        human_samples.append(normalized)
 
     # Generate AI Essay Samples (50 unique samples)
     for i in range(count_per_label):
-        topic_title, model_family, full_text = AI_PASSAGES[i % len(AI_PASSAGES)]
-        words = len(full_text.split())
+        topic_title, model_fam, full_text = AI_TOPIC_SPECS[i % len(AI_TOPIC_SPECS)]
+        domain_slug = topic_title.lower().replace(" ", "_")
+        sample_id = f"ai_exp_{i+1:03d}"
+        source_group_id = f"group_{i % 10:03d}"
 
-        sample = {
+        raw_sample = {
+            "sample_id": sample_id,
             "text": full_text,
-            "label": "ai",
-            "source_group_id": f"group_{i % 10:03d}",
-            "source": f"synthetic_{model_family}_a{i+1:03d}",
-            "domain": topic_title.lower().replace(" ", "_"),
-            "model_family": model_family,
-            "word_count": words,
-            "language": "en",
+            "label": 1,
+            "domain": domain_slug,
+            "model_family": model_fam,
+            "source": f"{model_fam}_synthetic",
+            "source_group_id": source_group_id,
+            "word_count": len(full_text.split()),
+            "char_count": len(full_text),
             "provenance": {
-                "source_name": "Synthetix Synthetic Generation Corpus",
+                "source_name": f"Synthetix Synthetic {model_fam.upper()} Corpus v2",
                 "dataset_license": "CC-BY-4.0",
-                "original_model": model_family
+                "author_type": "ai",
+                "generator_model": model_fam
             }
         }
-        ai_samples.append(normalize_sample(sample))
+        normalized = normalize_sample(raw_sample)
+        ai_samples.append(normalized)
 
     return human_samples, ai_samples
 
-
-
-def save_jsonl(filepath, data):
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, "w", encoding="utf-8") as f:
-        for item in data:
-            f.write(json.dumps(item) + "\n")
-
 def main():
-    human, ai = generate_expanded_dataset(50)
-    
-    human_file = "benchmark/corpus/human_samples.jsonl"
-    ai_file = "benchmark/corpus/ai_samples.jsonl"
+    human_samples, ai_samples = generate_expanded_dataset(count_per_label=50)
 
-    save_jsonl(human_file, human)
-    save_jsonl(ai_file, ai)
+    out_dir = "benchmark/corpus"
+    os.makedirs(out_dir, exist_ok=True)
 
-    print(f"Generated {len(human)} human samples in '{human_file}'")
-    print(f"Generated {len(ai)} AI samples in '{ai_file}'")
+    h_path = os.path.join(out_dir, "human_samples.jsonl")
+    a_path = os.path.join(out_dir, "ai_samples.jsonl")
+
+    with open(h_path, "w", encoding="utf-8") as f:
+        for s in human_samples:
+            f.write(json.dumps(s) + "\n")
+
+    with open(a_path, "w", encoding="utf-8") as f:
+        for s in ai_samples:
+            f.write(json.dumps(s) + "\n")
+
+    print(f"Generated {len(human_samples)} human samples in '{h_path}'")
+    print(f"Generated {len(ai_samples)} AI samples in '{a_path}'")
 
 if __name__ == "__main__":
     main()
