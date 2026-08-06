@@ -22,7 +22,8 @@ def test_overall_ai_score_uses_only_transformer(monkeypatch):
     result = analyze(payload)
 
     assert result.overall_ai_score == 82.5
-    assert "DeBERTa-v3 Transformer" in result.analysis_method
+    assert "RoBERTa-base Classifier" in result.analysis_method
+
 
 def test_score_clamping_upper_bound(monkeypatch):
     """Test score clamping when transformer returns > 100.0 (e.g. 150.0)."""
@@ -63,7 +64,8 @@ def test_analysis_method_field_for_model_states(monkeypatch):
     monkeypatch.setattr(server, "MODEL_LOADED", True)
     monkeypatch.setattr(server, "score_text_with_transformer", lambda text: 50.0)
     result_true = analyze(payload)
-    assert "DeBERTa-v3 Transformer" in result_true.analysis_method
+    assert "RoBERTa-base Classifier" in result_true.analysis_method
+
 
     # State 2: MODEL_LOADED = False
     monkeypatch.setattr(server, "MODEL_LOADED", False)
