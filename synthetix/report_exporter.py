@@ -14,6 +14,44 @@ def generate_html_review_report(analysis: Dict[str, Any]) -> str:
     model_revision = html.escape(str(analysis.get("model_revision") or "unknown"))
     method_desc = html.escape(str(analysis.get("analysis_method", "Standard Evaluation")))
 
+    balanced = analysis.get("balanced_review") or {}
+    balanced_html = ""
+    if balanced:
+        hc3_score = html.escape(str(balanced.get("hc3_score", "n/a")))
+        dk_score = html.escape(str(balanced.get("desklib_score", "n/a")))
+        hc3_rev = html.escape(str(balanced.get("hc3_model_revision", "unknown")))
+        dk_rev = html.escape(str(balanced.get("desklib_model_revision", "unknown")))
+        agreement = html.escape(str(balanced.get("agreement_status", "unknown")))
+        outcome = html.escape(str(balanced.get("review_outcome", "unknown")))
+        outcome_label = {
+            "strong_ai_signal": "Strong agreement",
+            "low_ai_signal": "Low agreement",
+            "uncertain_disagreement": "Uncertain disagreement",
+        }.get(outcome, outcome)
+        balanced_html = f"""
+    <div class="card">
+        <h2>Balanced Review</h2>
+        <div class="meta">Agreement: {agreement} | Outcome: {outcome_label}</div>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <div class="card" style="flex: 1; min-width: 220px;">
+                <h3>HC3 Fast Baseline</h3>
+                <div class="score">Signal: {hc3_score}%</div>
+                <div class="meta">Model: {html.escape(str(balanced.get('hc3_model_name', 'unknown')))}<br>Revision: {hc3_rev}</div>
+            </div>
+            <div class="card" style="flex: 1; min-width: 220px;">
+                <h3>Desklib Academic Sensitive</h3>
+                <div class="score">Signal: {dk_score}%</div>
+                <div class="meta">Model: {html.escape(str(balanced.get('desklib_model_name', 'unknown')))}<br>Revision: {dk_rev}</div>
+            </div>
+        </div>
+        <div class="disclaimer">
+            <strong>Disagreement is inconclusive.</strong> When the two detectors disagree,
+            no reliable classification can be made from this analysis. These are experimental
+            writing signals, not probabilities or proof of AI authorship.
+        </div>
+    </div>
+"""
+
 
     
     sentences_html = []
@@ -51,6 +89,7 @@ def generate_html_review_report(analysis: Dict[str, Any]) -> str:
             <strong>Important Review Notice:</strong> This value is an experimental AI-writing signal from a text classification model, not a probability that the text was AI-written. It requires human review and must be evaluated alongside writing-process history and source material. Do not use it as sole grounds for misconduct actions.
         </div>
     </div>
+{balanced_html}
 
     <div class="card">
         <h2>Document Evidence Breakdown</h2>

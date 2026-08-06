@@ -17,7 +17,7 @@ def test_default_backend_is_hc3_roberta():
 
 
 def test_registry_contains_both_backends():
-    assert set(BACKENDS) == {"hc3_roberta", "desklib_academic"}
+    assert set(BACKENDS) == {"hc3_roberta", "desklib_academic", "balanced_review"}
 
 
 def test_create_backend_hc3():

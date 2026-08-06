@@ -3,15 +3,15 @@ setlocal
 cd /d "%~dp0"
 
 echo ============================================================
-echo  Synthetix - Fast Baseline mode
-echo  Faster, but frequently misses unfamiliar AI writing
+echo  Synthetix - Experimental Comparison mode
+echo  Two detectors; uncertain outcome when they disagree
 echo ============================================================
 
 where py >nul 2>nul
 if %errorlevel%==0 (
-    py -3 launch_synthetix.py --backend hc3_roberta
+    py -3 launch_synthetix.py --backend balanced_review
 ) else (
-    python launch_synthetix.py --backend hc3_roberta
+    python launch_synthetix.py --backend balanced_review
 )
 
 set EXITCODE=%errorlevel%

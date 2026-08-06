@@ -20,10 +20,13 @@ def test_launcher_resolves_repo_root():
 def test_backend_labels_match_ui_wording():
     mod = load_launcher()
     assert mod.backend_label("desklib_academic") == (
-        "Academic Sensitive — slower, stronger recall, high false-positive risk"
+        "Academic Sensitive — high recall, high false-positive risk"
     )
     assert mod.backend_label("hc3_roberta") == (
-        "Fast Baseline — faster, but may miss AI-written text"
+        "Fast Baseline — faster, but frequently misses unfamiliar AI writing"
+    )
+    assert mod.backend_label("balanced_review") == (
+        "Experimental Comparison — two detectors with an uncertain outcome when they disagree"
     )
 
 
@@ -35,10 +38,13 @@ def test_health_url():
 def test_windows_launchers_pass_correct_backend():
     start = (ROOT / "Start Synthetix.cmd").read_text(encoding="utf-8")
     fast = (ROOT / "Start Synthetix Fast.cmd").read_text(encoding="utf-8")
+    balanced = (ROOT / "Start Synthetix Balanced.cmd").read_text(encoding="utf-8")
     assert "--backend desklib_academic" in start
     assert "--backend hc3_roberta" in fast
+    assert "--backend balanced_review" in balanced
     assert "launch_synthetix.py" in start
     assert "launch_synthetix.py" in fast
+    assert "launch_synthetix.py" in balanced
 
 
 def test_ui_backend_banner_notices_and_states():
@@ -50,7 +56,14 @@ def test_ui_backend_banner_notices_and_states():
         "Analyzing locally…",
         "This mode is intentionally sensitive and may flag human writing. Review the sentence evidence rather than relying on the overall score.",
         "This mode may fail to identify AI-generated text outside its training distribution.",
+        "This mode runs two detectors. When they disagree, the result is uncertain and no classification is made.",
+        "Experimental Comparison — two detectors with an uncertain outcome when they disagree",
+        "Strong agreement",
+        "Low agreement",
+        "Uncertain disagreement",
+        "The detectors disagree. No reliable classification can be made from this analysis.",
         "Upload Document",
+        "Cancel",
         "backendBanner",
         "modeNotice",
         "errorBox",

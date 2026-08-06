@@ -31,8 +31,9 @@ SERVER_SCRIPT = REPO_ROOT / "server.py"
 VENV_DIR = REPO_ROOT / ".venv"
 
 BACKEND_LABELS = {
-    "hc3_roberta": "Fast Baseline — faster, but may miss AI-written text",
-    "desklib_academic": "Academic Sensitive — slower, stronger recall, high false-positive risk",
+    "hc3_roberta": "Fast Baseline — faster, but frequently misses unfamiliar AI writing",
+    "desklib_academic": "Academic Sensitive — high recall, high false-positive risk",
+    "balanced_review": "Experimental Comparison — two detectors with an uncertain outcome when they disagree",
 }
 
 REQUIRED_IMPORTS = ["fastapi", "uvicorn", "torch", "transformers", "sklearn", "requests"]

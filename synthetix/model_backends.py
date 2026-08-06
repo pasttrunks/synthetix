@@ -206,9 +206,82 @@ class DesklibAcademicBackend(DetectorBackend):
         return max(0.0, min(100.0, float(prob) * 100.0))
 
 
+class BalancedReviewBackend(DetectorBackend):
+    """Runs both pinned detectors and returns an agreement/abstention outcome.
+
+    At the existing 0.50 threshold:
+    - both at or above 0.50 -> strong AI-writing signal
+    - both below 0.50      -> low AI-writing signal
+    - otherwise            -> uncertain (detectors disagree); never converted
+
+    Scores are never averaged or combined numerically.
+    """
+
+    name = "balanced_review"
+    model_name = "balanced_review (hc3_roberta + desklib_academic)"
+    model_revision = f"hc3:{HC3_REVISION};desklib:{DESKLIB_REVISION}"
+    tokenizer_revision = model_revision
+
+    def __init__(self):
+        super().__init__()
+        self.hc3 = HC3RobertaBackend()
+        self.desklib = DesklibAcademicBackend()
+        self._lock = __import__("threading").Lock()
+
+    def load(self) -> None:
+        self.device = get_inference_device()
+        print("Loading HC3 Fast Baseline detector (balanced review)...")
+        self.hc3.load()
+        print("Loading Desklib Academic Sensitive detector (balanced review)...")
+        self.desklib.load()
+
+    def score_text(self, text: str) -> float:
+        """Compatibility path for the server scoring loop (HC3 sentence/chunk scores)."""
+        return self.hc3.score_text(text)
+
+    def review_document(self, text: str) -> Dict[str, Any]:
+        with self._lock:
+            t0 = time.perf_counter()
+            hs = self.hc3.score_text(text)
+            t_hc3 = time.perf_counter() - t0
+            t1 = time.perf_counter()
+            ds = self.desklib.score_text(text)
+            t_dk = time.perf_counter() - t1
+            total = time.perf_counter() - t0
+
+        h_hi = hs >= 50.0
+        d_hi = ds >= 50.0
+        if h_hi and d_hi:
+            agreement = "agree_high"
+            outcome = "strong_ai_signal"
+        elif not h_hi and not d_hi:
+            agreement = "agree_low"
+            outcome = "low_ai_signal"
+        else:
+            agreement = "disagree"
+            outcome = "uncertain_disagreement"
+
+        return {
+            "hc3_score": round(hs, 1),
+            "hc3_backend_name": "hc3_roberta",
+            "hc3_model_name": HC3_REPO,
+            "hc3_model_revision": HC3_REVISION,
+            "desklib_score": round(ds, 1),
+            "desklib_backend_name": "desklib_academic",
+            "desklib_model_name": DESKLIB_REPO,
+            "desklib_model_revision": DESKLIB_REVISION,
+            "agreement_status": agreement,
+            "review_outcome": outcome,
+            "hc3_elapsed_s": round(t_hc3, 3),
+            "desklib_elapsed_s": round(t_dk, 3),
+            "total_elapsed_s": round(total, 3),
+        }
+
+
 BACKENDS = {
     "hc3_roberta": HC3RobertaBackend,
     "desklib_academic": DesklibAcademicBackend,
+    "balanced_review": BalancedReviewBackend,
 }
 
 

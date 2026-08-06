@@ -4,7 +4,7 @@ cd /d "%~dp0"
 
 echo ============================================================
 echo  Synthetix - Academic Sensitive mode
-echo  Slower, stronger recall, high false-positive risk
+echo  High recall, high false-positive risk
 echo ============================================================
 
 where py >nul 2>nul

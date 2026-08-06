@@ -43,11 +43,11 @@ CONCURRENCY_SEMAPHORE = asyncio.Semaphore(5)
 
 def load_model_artifacts():
     global tokenizer, model, MODEL_LOADED, AI_LABEL_INDEX
-    if backend.name == "desklib_academic":
-        print(f"Loading Desklib academic detector: {backend.model_name} (revision: {backend.model_revision})...")
+    if backend.name in ("desklib_academic", "balanced_review"):
+        print(f"Loading detector backend '{backend.name}': {backend.model_name}")
         backend.load()
         MODEL_LOADED = True
-        print(f"Desklib detector loaded on device '{backend.device}'. AI label index: n/a (single-logit).")
+        print(f"Backend '{backend.name}' loaded on device '{backend.device}'.")
         return
     print(f"Loading RoBERTa AI detector model: {MODEL_NAME} (revision: {MODEL_REVISION})...")
     try:
@@ -154,6 +154,7 @@ class AnalysisResult(BaseModel):
     tokenizer_revision: Optional[str] = None
     inference_device: Optional[str] = None
     analysis_method: Optional[str] = None
+    balanced_review: Optional[Dict[str, Any]] = None
     ollama_active: bool
     sentence_scores: List[SentenceScore]
     chunk_scores: Optional[List[ChunkScore]] = None
@@ -185,7 +186,7 @@ def calculate_burstiness(sentence_lengths: List[int]) -> float:
     return float(std / mean)
 
 def score_text_with_transformer(text: str) -> float:
-    if backend.name == "desklib_academic":
+    if backend.name in ("desklib_academic", "balanced_review"):
         return backend.score_text(text)
     if not MODEL_LOADED:
         return 0.0
@@ -262,7 +263,9 @@ def analyze(payload: TextPayload):
         raise HTTPException(status_code=400, detail="Text payload cannot be empty.")
 
     ollama_ok = check_ollama_alive()
-    if backend.name == "desklib_academic":
+    if backend.name == "balanced_review":
+        active_model_desc = "Balanced Review (hc3_roberta + desklib_academic)" if MODEL_LOADED else "Unavailable"
+    elif backend.name == "desklib_academic":
         active_model_desc = f"Desklib Academic Detector ({backend.model_revision})" if MODEL_LOADED else "Unavailable"
     else:
         active_model_desc = f"RoBERTa-base Classifier ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
@@ -355,7 +358,9 @@ def analyze(payload: TextPayload):
             overall_score = clamped_score
             chunk_scores = [ChunkScore(chunk_index=0, word_count=total_words, ai_score=clamped_score)]
             text_coverage = 100.0
-            if backend.name == "desklib_academic":
+            if backend.name == "balanced_review":
+                method_desc = "Balanced Review (hc3_roberta + desklib_academic)"
+            elif backend.name == "desklib_academic":
                 method_desc = f"Desklib Academic Detector ({backend.model_revision})"
             else:
                 method_desc = f"RoBERTa-base Classifier ({MODEL_REVISION})"
@@ -394,13 +399,23 @@ def analyze(payload: TextPayload):
                 overall_score = 0.0
 
             text_coverage = round((len(words_covered_indices) / total_words) * 100.0, 1) if total_words > 0 else 100.0
-            method_desc = f"{'Desklib Academic Detector' if backend.name == 'desklib_academic' else 'RoBERTa-base Classifier'} ({len(chunk_scores)} Chunks, Weighted Avg)"
+            if backend.name == "balanced_review":
+                method_desc = f"Balanced Review ({len(chunk_scores)} Chunks, Weighted Avg)"
+            elif backend.name == "desklib_academic":
+                method_desc = f"Desklib Academic Detector ({len(chunk_scores)} Chunks, Weighted Avg)"
+            else:
+                method_desc = f"RoBERTa-base Classifier ({len(chunk_scores)} Chunks, Weighted Avg)"
     else:
         overall_score = None
         method_desc = "unavailable"
         chunk_scores = []
         text_coverage = None
 
+
+    # Balanced review: run both pinned detectors and report agreement/abstention.
+    review = None
+    if backend.name == "balanced_review":
+        review = backend.review_document(raw_text)
 
     # Phase 2: Compute multi-signal ensemble outputs
     lexical_res = compute_lexical_regularity_score(raw_text)
@@ -424,6 +439,7 @@ def analyze(payload: TextPayload):
         tokenizer_revision=backend.tokenizer_revision if MODEL_LOADED else None,
         inference_device=backend.device if MODEL_LOADED else None,
         analysis_method=method_desc,
+        balanced_review=review,
         ollama_active=ollama_ok,
         sentence_scores=sentence_scores,
         chunk_scores=chunk_scores,

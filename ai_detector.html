@@ -442,6 +442,74 @@
             color: var(--text-muted);
             margin-top: 0.25rem;
         }
+
+        .balanced-cards {
+            display: flex;
+            gap: 1rem;
+            margin: 0.75rem 0;
+            flex-wrap: wrap;
+        }
+
+        .balanced-card {
+            flex: 1;
+            min-width: 200px;
+            background: #1f2833;
+            border: 1px solid #45a29e;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+
+        .balanced-card-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .balanced-card-score {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #66fcf1;
+        }
+
+        .balanced-card-meta {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            word-break: break-all;
+        }
+
+        .outcome-card {
+            margin: 0.75rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid;
+        }
+
+        .outcome-strong {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: #10b981;
+            color: #a7f3d0;
+        }
+
+        .outcome-low {
+            background: rgba(96, 165, 250, 0.12);
+            border-color: #60a5fa;
+            color: #bfdbfe;
+        }
+
+        .outcome-neutral {
+            background: rgba(251, 191, 36, 0.10);
+            border-color: #fbbf24;
+            color: #fde68a;
+        }
+
+        .outcome-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+
+        .outcome-text {
+            font-size: 0.9rem;
+        }
     </style>
 
 </head>
@@ -499,6 +567,7 @@
                 <button class="btn-sample" id="btnUpload" onclick="document.getElementById('fileInput').click()">Upload Document</button>
                 <input type="file" id="fileInput" accept=".txt,.docx,.pdf" style="display: none;" />
                 <button class="btn-analyze" id="btnAnalyze" onclick="analyzeText()">Analyze Text</button>
+                <button class="btn-sample" id="btnCancel" style="display: none;" onclick="cancelAnalysis()">Cancel</button>
             </div>
             <div class="analysis-state" id="analysisState"></div>
         </div>
@@ -519,6 +588,25 @@
             <div class="backend-provenance" id="resultBackend"></div>
             <div class="score-disclaimer">
                 * This is an experimental AI-writing signal, not a probability that the text was AI-written. Requires human review.
+            </div>
+
+            <div id="balancedResults" hidden>
+                <div class="balanced-cards">
+                    <div class="balanced-card">
+                        <div class="balanced-card-title">HC3 Fast Baseline</div>
+                        <div class="balanced-card-score" id="hc3Score">—</div>
+                        <div class="balanced-card-meta" id="hc3Meta"></div>
+                    </div>
+                    <div class="balanced-card">
+                        <div class="balanced-card-title">Desklib Academic Sensitive</div>
+                        <div class="balanced-card-score" id="dkScore">—</div>
+                        <div class="balanced-card-meta" id="dkMeta"></div>
+                    </div>
+                </div>
+                <div class="outcome-card outcome-neutral" id="outcomeCard">
+                    <div class="outcome-title" id="outcomeTitle">—</div>
+                    <div class="outcome-text" id="outcomeText"></div>
+                </div>
             </div>
 
             <div class="metrics-stack">
@@ -587,6 +675,8 @@
     let backendName = null;
     let analysisTimer = null;
     let analysisStart = 0;
+    let analysisController = null;
+    let userCancelled = false;
     document.getElementById('fileInput').addEventListener('change', uploadAndAnalyze);
 
     function updateCounts() {
@@ -628,8 +718,10 @@
         const b = data.backend_name || "unknown";
         backendName = b;
         const friendly = b === "desklib_academic"
-            ? "Academic Sensitive — slower, stronger recall, high false-positive risk"
-            : "Fast Baseline — faster, but may miss AI-written text";
+            ? "Academic Sensitive — high recall, high false-positive risk"
+            : b === "balanced_review"
+                ? "Experimental Comparison — two detectors with an uncertain outcome when they disagree"
+                : "Fast Baseline — faster, but frequently misses unfamiliar AI writing";
         document.getElementById('modeName').textContent = friendly;
         document.getElementById('backendMeta').textContent =
             "backend: " + b +
@@ -639,6 +731,8 @@
         const notice = document.getElementById('modeNotice');
         if (b === "desklib_academic") {
             notice.textContent = "This mode is intentionally sensitive and may flag human writing. Review the sentence evidence rather than relying on the overall score.";
+        } else if (b === "balanced_review") {
+            notice.textContent = "This mode runs two detectors. When they disagree, the result is uncertain and no classification is made.";
         } else {
             notice.textContent = "This mode may fail to identify AI-generated text outside its training distribution.";
         }
@@ -678,37 +772,51 @@
         clearError();
 
         const btn = document.getElementById('btnAnalyze');
+        const cancelBtn = document.getElementById('btnCancel');
         btn.disabled = true;
         btn.textContent = "Analyzing locally…";
+        cancelBtn.style.display = "";
         const stateEl = document.getElementById('analysisState');
         analysisStart = Date.now();
+        userCancelled = false;
+        analysisController = new AbortController();
         analysisTimer = setInterval(() => {
-            const s = ((Date.now() - analysisStart) / 1000).toFixed(1);
-            stateEl.textContent = "Analyzing locally… " + s + "s elapsed";
+            const ms = Date.now() - analysisStart;
+            const s = (ms / 1000).toFixed(1);
+            if (backendName === "balanced_review") {
+                const stage = ms < 5000
+                    ? "Running HC3 Fast Baseline…"
+                    : "Running Desklib Academic Sensitive… (may take a while)";
+                stateEl.textContent = "Analyzing locally… " + stage + " " + s + "s elapsed";
+            } else {
+                stateEl.textContent = "Analyzing locally… " + s + "s elapsed";
+            }
         }, 100);
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 300000);
+        const timeout = setTimeout(() => analysisController.abort(), 300000);
 
         try {
             const res = await fetch(API_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text: text }),
-                signal: controller.signal
+                signal: analysisController.signal
             });
 
             if (res.ok) {
                 const data = await res.json();
                 lastAnalysis = data;
                 const elapsed = ((Date.now() - analysisStart) / 1000).toFixed(1);
-                renderResults(data.overall_ai_score, data.burstiness_cv, data.predictability_index, data.phrase_count, data.sentence_scores, data.model_name, data.ollama_active, data.text_coverage, data.analysis_method, data.message, data.backend_name);
+                renderResults(data.overall_ai_score, data.burstiness_cv, data.predictability_index, data.phrase_count, data.sentence_scores, data.model_name, data.ollama_active, data.text_coverage, data.analysis_method, data.message, data.backend_name, data.balanced_review);
                 stateEl.textContent = "Analysis finished in " + elapsed + "s";
             } else {
                 throw new Error("HTTP " + res.status);
             }
         } catch (e) {
             console.warn("API query failed:", e);
-            if (e.name === "AbortError") {
+            if (e.name === "AbortError" && userCancelled) {
+                stateEl.textContent = "Analysis cancelled.";
+                showFriendlyError("Analysis cancelled. You can start another analysis.");
+            } else if (e.name === "AbortError") {
                 showFriendlyError("Analysis timed out. The document may be too long for this backend; try the Fast Baseline launcher or a shorter document. Technical details are in the terminal.");
             } else {
                 showFriendlyError("The backend could not analyze this text. Check the terminal for details, then try again.");
@@ -719,6 +827,14 @@
             clearInterval(analysisTimer);
             btn.disabled = false;
             btn.textContent = "Analyze Text";
+            cancelBtn.style.display = "none";
+        }
+    }
+
+    function cancelAnalysis() {
+        userCancelled = true;
+        if (analysisController) {
+            analysisController.abort();
         }
     }
 
@@ -778,7 +894,7 @@
         }
     }
 
-    function renderResults(aiScore, burstinessCv, predictabilityIdx, phraseCount, sentences, modelName, ollamaActive, coverage, analysisMethod, message, backendName) {
+    function renderResults(aiScore, burstinessCv, predictabilityIdx, phraseCount, sentences, modelName, ollamaActive, coverage, analysisMethod, message, backendName, balanced) {
         const badge = document.getElementById('scoreBadge');
         if (aiScore === null || aiScore === undefined) {
             document.getElementById('aiScore').textContent = 'N/A';
@@ -802,9 +918,42 @@
             badge.className = 'score-badge badge-human';
         }
 
+        const balancedResults = document.getElementById('balancedResults');
+        if (balanced && balanced.review_outcome) {
+            balancedResults.hidden = false;
+            document.getElementById('hc3Score').textContent = balanced.hc3_score + '%';
+            document.getElementById('hc3Meta').textContent =
+                balanced.hc3_backend_name + " | " + balanced.hc3_model_name + " | " + (balanced.hc3_model_revision || "").slice(0, 7);
+            document.getElementById('dkScore').textContent = balanced.desklib_score + '%';
+            document.getElementById('dkMeta').textContent =
+                balanced.desklib_backend_name + " | " + balanced.desklib_model_name + " | " + (balanced.desklib_model_revision || "").slice(0, 7);
+            const card = document.getElementById('outcomeCard');
+            const title = document.getElementById('outcomeTitle');
+            const text = document.getElementById('outcomeText');
+            if (balanced.review_outcome === "strong_ai_signal") {
+                card.className = "outcome-card outcome-strong";
+                title.textContent = "Strong agreement";
+                text.textContent = "Both detectors identified an elevated AI-writing signal. This is still not proof of AI authorship.";
+            } else if (balanced.review_outcome === "low_ai_signal") {
+                card.className = "outcome-card outcome-low";
+                title.textContent = "Low agreement";
+                text.textContent = "Neither detector identified a strong AI-writing signal. This does not prove the text was written by a human.";
+            } else {
+                card.className = "outcome-card outcome-neutral";
+                title.textContent = "Uncertain disagreement";
+                text.textContent = "The detectors disagree. No reliable classification can be made from this analysis.";
+            }
+        } else {
+            balancedResults.hidden = true;
+        }
+
         const prov = document.getElementById('resultBackend');
         if (backendName) {
-            const friendly = backendName === "desklib_academic" ? "Academic Sensitive" : "Fast Baseline";
+            const friendly = backendName === "desklib_academic"
+                ? "Academic Sensitive"
+                : backendName === "balanced_review"
+                    ? "Experimental Comparison"
+                    : "Fast Baseline";
             prov.textContent = "Result produced by: " + friendly + " (" + backendName + ")";
         } else {
             prov.textContent = "";
