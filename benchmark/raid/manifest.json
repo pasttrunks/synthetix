@@ -1,0 +1,134 @@
+{
+  "name": "RAID Baseline Subset (Frozen)",
+  "source_dataset": "liamdugan/raid",
+  "source_config": "raid",
+  "source_split": "train",
+  "source_file": "train.csv",
+  "source_revision": "865cac74188466cb0c3b7574a10204007b57a459",
+  "frozen_at": "2026-08-06T16:01:06.247807+00:00",
+  "seed": 42,
+  "selection": {
+    "total_samples": 200,
+    "human": 100,
+    "ai": 100,
+    "domains": {
+      "abstracts": {
+        "human": 25,
+        "ai": 25
+      },
+      "news": {
+        "human": 25,
+        "ai": 25
+      },
+      "reviews": {
+        "human": 25,
+        "ai": 25
+      },
+      "wiki": {
+        "human": 25,
+        "ai": 25
+      }
+    },
+    "adversarial_transformations": "none (attack == 'none' only)",
+    "ai_balancing": "per-domain quota across available generator families, remainder to first families in sorted order"
+  },
+  "composition": {
+    "by_domain": {
+      "abstracts": {
+        "human": 25,
+        "ai": 25
+      },
+      "news": {
+        "human": 25,
+        "ai": 25
+      },
+      "reviews": {
+        "human": 25,
+        "ai": 25
+      },
+      "wiki": {
+        "human": 25,
+        "ai": 25
+      }
+    },
+    "by_generator": {
+      "abstracts": {
+        "chatgpt": 3,
+        "cohere": 3,
+        "cohere-chat": 3,
+        "gpt2": 2,
+        "gpt3": 2,
+        "gpt4": 2,
+        "llama-chat": 2,
+        "mistral": 2,
+        "mistral-chat": 2,
+        "mpt": 2,
+        "mpt-chat": 2
+      },
+      "news": {
+        "chatgpt": 3,
+        "cohere": 3,
+        "cohere-chat": 3,
+        "gpt2": 2,
+        "gpt3": 2,
+        "gpt4": 2,
+        "llama-chat": 2,
+        "mistral": 2,
+        "mistral-chat": 2,
+        "mpt": 2,
+        "mpt-chat": 2
+      },
+      "reviews": {
+        "chatgpt": 3,
+        "cohere": 3,
+        "cohere-chat": 3,
+        "gpt2": 2,
+        "gpt3": 2,
+        "gpt4": 2,
+        "llama-chat": 2,
+        "mistral": 2,
+        "mistral-chat": 2,
+        "mpt": 2,
+        "mpt-chat": 2
+      },
+      "wiki": {
+        "chatgpt": 3,
+        "cohere": 3,
+        "cohere-chat": 3,
+        "gpt2": 2,
+        "gpt3": 2,
+        "gpt4": 2,
+        "llama-chat": 2,
+        "mistral": 2,
+        "mistral-chat": 2,
+        "mpt": 2,
+        "mpt-chat": 2
+      }
+    }
+  },
+  "validation": {
+    "unique_raid_ids": 200,
+    "unique_content_hashes": 200,
+    "label_counts": {
+      "0": 100,
+      "1": 100
+    },
+    "per_domain_label_counts": {
+      "abstracts:0": 25,
+      "abstracts:1": 25,
+      "news:0": 25,
+      "news:1": 25,
+      "reviews:0": 25,
+      "reviews:1": 25,
+      "wiki:0": 25,
+      "wiki:1": 25
+    }
+  },
+  "corpus_sha256": "d1b42c0ef918f1a482e14a56f80b891f8142e07e93650db205db055f6d061ad1",
+  "files": {
+    "raid_baseline.jsonl": {
+      "rows": 200,
+      "sha256": "d1b42c0ef918f1a482e14a56f80b891f8142e07e93650db205db055f6d061ad1"
+    }
+  }
+}
