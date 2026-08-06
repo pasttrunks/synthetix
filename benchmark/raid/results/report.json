@@ -1,0 +1,521 @@
+{
+  "title": "RAID Baseline Evaluation Report",
+  "disclaimer": "This baseline uses non-adversarial samples from the labeled liamdugan/raid train split. It evaluates out-of-fixture transfer of the pinned Synthetix detector and is not itself a claim about modern AI-detection accuracy.",
+  "timestamp": "2026-08-06T16:56:10.322625+00:00",
+  "application_commit_sha": "c58cd5dd94ffc6c3c6d56000c54be7d01b39ad44",
+  "detector": {
+    "model_name": "Hello-SimpleAI/chatgpt-detector-roberta",
+    "model_revision": "d2b342c61775d5dd0221808a79983ed3b86ffd86",
+    "tokenizer_revision": "d2b342c61775d5dd0221808a79983ed3b86ffd86"
+  },
+  "corpus": {
+    "file": "benchmark/raid/raid_baseline.jsonl",
+    "sha256": "d1b42c0ef918f1a482e14a56f80b891f8142e07e93650db205db055f6d061ad1",
+    "rows": 200
+  },
+  "validation": {
+    "total_rows": 200,
+    "unique_raid_ids": 200,
+    "unique_content_hashes": 200,
+    "label_counts": {
+      "0": 100,
+      "1": 100
+    },
+    "per_domain_label_counts": {
+      "abstracts:0": 25,
+      "abstracts:1": 25,
+      "news:0": 25,
+      "news:1": 25,
+      "reviews:0": 25,
+      "reviews:1": 25,
+      "wiki:0": 25,
+      "wiki:1": 25
+    },
+    "hash_mismatches": []
+  },
+  "evaluation": {
+    "api_url": "http://127.0.0.1:8000/api/analyze",
+    "threshold": 0.5,
+    "total_samples": 200,
+    "evaluated": 200,
+    "abstentions": 0,
+    "errors": 0,
+    "coverage_pct": 100.0
+  },
+  "metrics": {
+    "n": 200,
+    "auroc": 0.7563,
+    "auprc": 0.8154,
+    "brier_score": 0.2635,
+    "ece": 0.2608,
+    "confusion_matrix": {
+      "tp": 51,
+      "fp": 12,
+      "tn": 88,
+      "fn": 49
+    },
+    "precision": 0.8095,
+    "recall": 0.51,
+    "f1": 0.6258,
+    "accuracy": 0.695,
+    "fpr": 0.12
+  },
+  "by_domain": {
+    "abstracts": {
+      "n": 50,
+      "auroc": 0.8168,
+      "auprc": 0.842,
+      "brier_score": 0.3057,
+      "ece": 0.3356,
+      "confusion_matrix": {
+        "tp": 7,
+        "fp": 1,
+        "tn": 24,
+        "fn": 18
+      },
+      "precision": 0.875,
+      "recall": 0.28,
+      "f1": 0.4242,
+      "accuracy": 0.62,
+      "fpr": 0.04,
+      "score_summary": {
+        "human": {
+          "count": 25,
+          "mean": 4.45,
+          "median": 0.1,
+          "std": 16.8,
+          "min": 0.0,
+          "max": 84.8,
+          "q25": 0.0,
+          "q75": 0.2,
+          "bins_10": [
+            23,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "ai": {
+          "count": 25,
+          "mean": 35.2,
+          "median": 16.7,
+          "std": 40.18,
+          "min": 0.0,
+          "max": 99.9,
+          "q25": 5.1,
+          "q75": 94.3,
+          "bins_10": [
+            8,
+            9,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            7
+          ]
+        }
+      }
+    },
+    "news": {
+      "n": 50,
+      "auroc": 0.6952,
+      "auprc": 0.7973,
+      "brier_score": 0.2548,
+      "ece": 0.2536,
+      "confusion_matrix": {
+        "tp": 14,
+        "fp": 3,
+        "tn": 22,
+        "fn": 11
+      },
+      "precision": 0.8235,
+      "recall": 0.56,
+      "f1": 0.6667,
+      "accuracy": 0.72,
+      "fpr": 0.12,
+      "score_summary": {
+        "human": {
+          "count": 25,
+          "mean": 17.69,
+          "median": 4.4,
+          "std": 30.25,
+          "min": 0.1,
+          "max": 97.8,
+          "q25": 1.6,
+          "q75": 12.1,
+          "bins_10": [
+            18,
+            2,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3
+          ]
+        },
+        "ai": {
+          "count": 25,
+          "mean": 58.21,
+          "median": 96.1,
+          "std": 46.05,
+          "min": 0.0,
+          "max": 99.9,
+          "q25": 1.2,
+          "q75": 99.9,
+          "bins_10": [
+            8,
+            2,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            14
+          ]
+        }
+      }
+    },
+    "reviews": {
+      "n": 50,
+      "auroc": 0.8664,
+      "auprc": 0.9071,
+      "brier_score": 0.1768,
+      "ece": 0.1838,
+      "confusion_matrix": {
+        "tp": 18,
+        "fp": 3,
+        "tn": 22,
+        "fn": 7
+      },
+      "precision": 0.8571,
+      "recall": 0.72,
+      "f1": 0.7826,
+      "accuracy": 0.8,
+      "fpr": 0.12,
+      "score_summary": {
+        "human": {
+          "count": 25,
+          "mean": 13.38,
+          "median": 0.3,
+          "std": 29.34,
+          "min": 0.0,
+          "max": 93.6,
+          "q25": 0.1,
+          "q75": 2.0,
+          "bins_10": [
+            20,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2
+          ]
+        },
+        "ai": {
+          "count": 25,
+          "mean": 73.2,
+          "median": 99.7,
+          "std": 42.17,
+          "min": 0.0,
+          "max": 99.9,
+          "q25": 26.9,
+          "q75": 99.9,
+          "bins_10": [
+            5,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            18
+          ]
+        }
+      }
+    },
+    "wiki": {
+      "n": 50,
+      "auroc": 0.668,
+      "auprc": 0.7592,
+      "brier_score": 0.3168,
+      "ece": 0.3239,
+      "confusion_matrix": {
+        "tp": 12,
+        "fp": 5,
+        "tn": 20,
+        "fn": 13
+      },
+      "precision": 0.7059,
+      "recall": 0.48,
+      "f1": 0.5714,
+      "accuracy": 0.64,
+      "fpr": 0.2,
+      "score_summary": {
+        "human": {
+          "count": 25,
+          "mean": 19.63,
+          "median": 1.9,
+          "std": 32.96,
+          "min": 0.0,
+          "max": 96.4,
+          "q25": 0.1,
+          "q75": 16.9,
+          "bins_10": [
+            18,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            3
+          ]
+        },
+        "ai": {
+          "count": 25,
+          "mean": 48.97,
+          "median": 34.7,
+          "std": 47.53,
+          "min": 0.0,
+          "max": 99.9,
+          "q25": 0.2,
+          "q75": 98.5,
+          "bins_10": [
+            12,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            11
+          ]
+        }
+      }
+    }
+  },
+  "by_generator": {
+    "chatgpt": {
+      "n": 12,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.2119,
+      "ece": 0.2425,
+      "confusion_matrix": {
+        "tp": 9,
+        "fp": 0,
+        "tn": 0,
+        "fn": 3
+      },
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571,
+      "accuracy": 0.75,
+      "fpr": 0.0
+    },
+    "cohere": {
+      "n": 12,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.5943,
+      "ece": 0.6747,
+      "confusion_matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 0,
+        "fn": 9
+      },
+      "precision": 1.0,
+      "recall": 0.25,
+      "f1": 0.4,
+      "accuracy": 0.25,
+      "fpr": 0.0
+    },
+    "cohere-chat": {
+      "n": 12,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.4657,
+      "ece": 0.5207,
+      "confusion_matrix": {
+        "tp": 5,
+        "fp": 0,
+        "tn": 0,
+        "fn": 7
+      },
+      "precision": 1.0,
+      "recall": 0.4167,
+      "f1": 0.5882,
+      "accuracy": 0.4167,
+      "fpr": 0.0
+    },
+    "gpt2": {
+      "n": 8,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.316,
+      "ece": 0.342,
+      "confusion_matrix": {
+        "tp": 5,
+        "fp": 0,
+        "tn": 0,
+        "fn": 3
+      },
+      "precision": 1.0,
+      "recall": 0.625,
+      "f1": 0.7692,
+      "accuracy": 0.625,
+      "fpr": 0.0
+    },
+    "gpt3": {
+      "n": 8,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.2748,
+      "ece": 0.3223,
+      "confusion_matrix": {
+        "tp": 5,
+        "fp": 0,
+        "tn": 0,
+        "fn": 3
+      },
+      "precision": 1.0,
+      "recall": 0.625,
+      "f1": 0.7692,
+      "accuracy": 0.625,
+      "fpr": 0.0
+    },
+    "gpt4": {
+      "n": 8,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.5979,
+      "ece": 0.6157,
+      "confusion_matrix": {
+        "tp": 3,
+        "fp": 0,
+        "tn": 0,
+        "fn": 5
+      },
+      "precision": 1.0,
+      "recall": 0.375,
+      "f1": 0.5455,
+      "accuracy": 0.375,
+      "fpr": 0.0
+    },
+    "llama-chat": {
+      "n": 8,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.1248,
+      "ece": 0.1356,
+      "confusion_matrix": {
+        "tp": 7,
+        "fp": 0,
+        "tn": 0,
+        "fn": 1
+      },
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1": 0.9333,
+      "accuracy": 0.875,
+      "fpr": 0.0
+    },
+    "mistral": {
+      "n": 8,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.8903,
+      "ece": 0.941,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "tn": 0,
+        "fn": 8
+      },
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.0,
+      "fpr": 0.0
+    },
+    "mistral-chat": {
+      "n": 8,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.25,
+      "ece": 0.2531,
+      "confusion_matrix": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 0,
+        "fn": 2
+      },
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571,
+      "accuracy": 0.75,
+      "fpr": 0.0
+    },
+    "mpt": {
+      "n": 8,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.7475,
+      "ece": 0.749,
+      "confusion_matrix": {
+        "tp": 2,
+        "fp": 0,
+        "tn": 0,
+        "fn": 6
+      },
+      "precision": 1.0,
+      "recall": 0.25,
+      "f1": 0.4,
+      "accuracy": 0.25,
+      "fpr": 0.0
+    },
+    "mpt-chat": {
+      "n": 8,
+      "auroc": null,
+      "auprc": null,
+      "brier_score": 0.2157,
+      "ece": 0.2475,
+      "confusion_matrix": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 0,
+        "fn": 2
+      },
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571,
+      "accuracy": 0.75,
+      "fpr": 0.0
+    }
+  }
+}
