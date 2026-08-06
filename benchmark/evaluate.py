@@ -282,6 +282,11 @@ def main():
         "git_commit_sha": git_commit_sha,
         "corpus_path": os.path.abspath(args.corpus),
         "corpus_sha256": corpus_sha256,
+        "model_info": {
+            "model_name": "Hello-SimpleAI/chatgpt-detector-roberta",
+            "model_revision": "main",
+            "tokenizer_revision": "main"
+        },
         "total_samples": len(samples),
         "eval_samples": len(valid_results),
         "abstained_samples": abstained_count,
@@ -292,6 +297,7 @@ def main():
         "per_domain": per_domain_metrics,
         "per_model_family": per_model_metrics
     }
+
 
     os.makedirs(args.output_dir, exist_ok=True)
     report_file = os.path.join(args.output_dir, "report_latest.json")

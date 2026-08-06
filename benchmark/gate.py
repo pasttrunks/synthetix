@@ -101,14 +101,51 @@ def check_release_gates(
 
     return all_passed
 
+def validate_report_integrity(report: Dict[str, Any], expected_commit_sha: str = None) -> bool:
+    """Validate mathematical and provenance integrity of the evaluation report."""
+    overall_m = report.get("overall_metrics", {})
+    cm = overall_m.get("confusion_matrix", {})
+
+    # Check model provenance
+    model_info = report.get("model_info", {})
+    if not model_info or not model_info.get("model_name"):
+        print("FAIL [Integrity]: Missing or empty 'model_info' in benchmark report.", file=sys.stderr)
+        return False
+
+    # Check commit SHA if specified
+    if expected_commit_sha:
+        report_sha = report.get("git_commit_sha", "")
+        if report_sha != expected_commit_sha:
+            print(f"FAIL [Integrity]: Report commit SHA '{report_sha}' does not match expected SHA '{expected_commit_sha}'.", file=sys.stderr)
+            return False
+
+    # Check Brier score sanity
+    brier = overall_m.get("brier_score")
+    if brier is not None and (brier < 0.0 or brier > 1.0):
+        print(f"FAIL [Integrity]: Invalid Brier score {brier} outside range [0, 1].", file=sys.stderr)
+        return False
+
+    # Check subgroup matrix summation integrity
+    domain_tp = sum(d.get("confusion_matrix", {}).get("tp", 0) for d in report.get("per_domain", {}).values())
+    domain_fp = sum(d.get("confusion_matrix", {}).get("fp", 0) for d in report.get("per_domain", {}).values())
+    domain_tn = sum(d.get("confusion_matrix", {}).get("tn", 0) for d in report.get("per_domain", {}).values())
+    domain_fn = sum(d.get("confusion_matrix", {}).get("fn", 0) for d in report.get("per_domain", {}).values())
+
+    if (domain_tp != cm.get("tp", 0) or domain_fp != cm.get("fp", 0) or
+        domain_tn != cm.get("tn", 0) or domain_fn != cm.get("fn", 0)):
+        print(f"FAIL [Integrity]: Per-domain confusion matrix sum ({domain_tp}, {domain_fp}, {domain_tn}, {domain_fn}) does not match overall ({cm.get('tp')}, {cm.get('fp')}, {cm.get('tn')}, {cm.get('fn')}).", file=sys.stderr)
+        return False
+
+    return True
+
 def main():
     parser = argparse.ArgumentParser(description="Synthetix AI Detector CI/CD Release Gate Checker")
     parser.add_argument("--report", type=str, default="benchmark/reports/report_latest.json", help="Path to benchmark JSON report")
     parser.add_argument("--min-auroc", type=float, default=0.85, help="Minimum acceptable AUROC (default: 0.85)")
     parser.add_argument("--max-subgroup-fpr-multiplier", type=float, default=2.0, help="Maximum allowed subgroup FPR relative to overall FPR (default: 2.0)")
     parser.add_argument("--max-ece", type=float, default=0.05, help="Maximum acceptable Expected Calibration Error (default: 0.05)")
-
     parser.add_argument("--min-tpr-at-1-fpr", type=float, default=0.50, help="Minimum acceptable TPR at 1.0%% FPR (default: 0.50)")
+    parser.add_argument("--expected-commit-sha", type=str, default=None, help="Expected Git commit SHA to verify against report metadata")
 
     args = parser.parse_args()
 
@@ -118,6 +155,9 @@ def main():
 
     with open(args.report, "r", encoding="utf-8") as f:
         report = json.load(f)
+
+    if not validate_report_integrity(report, expected_commit_sha=args.expected_commit_sha):
+        sys.exit(1)
 
     passed = check_release_gates(
         report=report,
@@ -131,6 +171,7 @@ def main():
         sys.exit(0)
     else:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

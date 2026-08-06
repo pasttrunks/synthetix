@@ -45,8 +45,15 @@ jobs:
       - name: Validate benchmark corpus schema
         run: |
           python benchmark/evaluate.py --corpus benchmark/corpus/essay_corpus.jsonl --dry-run
+          python benchmark/evaluate.py --corpus benchmark/corpus/test.jsonl --dry-run
 
-      - name: Run quality gate check
+      - name: Run real-time detector evaluation and release gate check
         run: |
-          python benchmark/gate.py --report benchmark/reports/report_latest.json
+          python server.py &
+          SERVER_PID=$!
+          python scripts/wait_for_readiness.py
+          python benchmark/evaluate.py --corpus benchmark/corpus/test.jsonl --api-url http://127.0.0.1:8000/api/analyze --output-dir benchmark/ci-reports
+          python benchmark/gate.py --report benchmark/ci-reports/report_latest.json --expected-commit-sha $GITHUB_SHA
+          kill $SERVER_PID || true
+
 
