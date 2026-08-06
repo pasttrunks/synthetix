@@ -38,17 +38,29 @@ def test_gate_ece_strict_threshold():
     }
     assert check_release_gates(mock_report) is False
 
-def test_report_exporter_html_escaping():
+def test_report_exporter_type_validation():
     from synthetix.report_exporter import generate_html_review_report
-    malicious_analysis = {
+    invalid_analysis = {
         "overall_ai_score": "<script>alert(1)</script>",
-        "model_name": "<img src=x onerror=alert(2)>",
+        "model_name": "Test Model",
         "analysis_method": "Standard Evaluation",
         "sentence_scores": []
     }
-    html_output = generate_html_review_report(malicious_analysis)
-    assert "<script>" not in html_output
-    assert "&lt;script&gt;" in html_output
+    with pytest.raises(TypeError, match="overall_ai_score must be numeric"):
+        generate_html_review_report(invalid_analysis)
+
+def test_report_exporter_valid_numeric_escaping():
+    from synthetix.report_exporter import generate_html_review_report
+    analysis = {
+        "overall_ai_score": 85.5,
+        "model_name": "<img src=x onerror=alert(2)>",
+        "analysis_method": "<script>alert(3)</script>",
+        "sentence_scores": []
+    }
+    html_output = generate_html_review_report(analysis)
+    assert "85.5%" in html_output
     assert "<img" not in html_output
     assert "&lt;img" in html_output
+    assert "<script>" not in html_output
+
 

@@ -30,6 +30,18 @@ jobs:
         run: |
           python -m pytest tests/
 
+      - name: Build wheel package distribution
+        run: |
+          python -m pip install build
+          python -m build --wheel --outdir dist/
+
+      - name: Test clean wheel installation in isolated environment
+        run: |
+          python -m venv wheel_test_env
+          source wheel_test_env/bin/activate || wheel_test_env/Scripts/activate
+          pip install dist/*.whl
+          python -c "import synthetix.signals.binoculars; import synthetix.signals.span_detector; import benchmark.adapters.external_adapters; print('Clean wheel package imports succeeded!')"
+
       - name: Validate benchmark corpus schema
         run: |
           python benchmark/evaluate.py --corpus benchmark/corpus/essay_corpus.jsonl --dry-run
@@ -37,3 +49,4 @@ jobs:
       - name: Run quality gate check
         run: |
           python benchmark/gate.py --report benchmark/reports/report_latest.json
+

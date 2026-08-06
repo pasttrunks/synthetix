@@ -34,7 +34,12 @@ synthetix-serve = "server:main"
 
 [tool.setuptools]
 py-modules = ["server"]
-packages = ["synthetix", "benchmark"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["synthetix*", "benchmark*"]
+namespaces = true
+
 
 
 [tool.pytest.ini_options]
