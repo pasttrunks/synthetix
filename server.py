@@ -12,6 +12,12 @@ from typing import List, Optional, Dict, Any
 
 from synthetix.ingest import extract_text_from_bytes, filter_qualifying_prose
 from synthetix.report_exporter import generate_html_review_report
+from synthetix.model_backends import (
+    create_backend,
+    get_ai_label_index,
+    get_inference_device,
+    resolve_backend_name,
+)
 
 import uvicorn
 import torch
@@ -27,6 +33,7 @@ AI_LABEL_INDEX = 1
 MODEL_NAME = "Hello-SimpleAI/chatgpt-detector-roberta"
 # Pinned to an immutable Hugging Face commit so inference is reproducible.
 MODEL_REVISION = "d2b342c61775d5dd0221808a79983ed3b86ffd86"
+backend = create_backend(resolve_backend_name())
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3:latest"
 MIN_TEXT_LENGTH = 150
@@ -34,20 +41,14 @@ CHUNK_SIZE = 400
 CHUNK_OVERLAP = 50
 CONCURRENCY_SEMAPHORE = asyncio.Semaphore(5)
 
-def get_ai_label_index(model_config) -> int:
-    if hasattr(model_config, "id2label") and model_config.id2label:
-        for idx, label in model_config.id2label.items():
-            label_lower = str(label).lower()
-            if any(term in label_lower for term in ["chatgpt", "fake", "ai", "generated", "synthetic", "label_1"]):
-                return int(idx)
-        for idx, label in model_config.id2label.items():
-            label_lower = str(label).lower()
-            if any(term in label_lower for term in ["real", "human", "label_0"]):
-                return 1 if int(idx) == 0 else 0
-    return 0
-
 def load_model_artifacts():
     global tokenizer, model, MODEL_LOADED, AI_LABEL_INDEX
+    if backend.name == "desklib_academic":
+        print(f"Loading Desklib academic detector: {backend.model_name} (revision: {backend.model_revision})...")
+        backend.load()
+        MODEL_LOADED = True
+        print(f"Desklib detector loaded on device '{backend.device}'. AI label index: n/a (single-logit).")
+        return
     print(f"Loading RoBERTa AI detector model: {MODEL_NAME} (revision: {MODEL_REVISION})...")
     try:
         try:
@@ -62,8 +63,9 @@ def load_model_artifacts():
         model.eval()
         MODEL_LOADED = True
         AI_LABEL_INDEX = get_ai_label_index(model.config)
+        backend.device = get_inference_device()
         source_str = "local cache" if loaded_from_cache else "remote download"
-        print(f"RoBERTa AI detector model successfully loaded from {source_str}! AI label index: {AI_LABEL_INDEX}")
+        print(f"RoBERTa AI detector model successfully loaded from {source_str}! AI label index: {AI_LABEL_INDEX} (device: {backend.device})")
     except Exception as e:
         print(f"Startup warning: Could not load RoBERTa model ({MODEL_NAME}): {e}")
         MODEL_LOADED = False
@@ -89,7 +91,11 @@ def health_check():
     return {
         "status": "ok",
         "model_loaded": MODEL_LOADED,
-        "model_name": MODEL_NAME if MODEL_LOADED else "None"
+        "model_name": backend.model_name if MODEL_LOADED else "None",
+        "backend_name": backend.name,
+        "model_revision": backend.model_revision if MODEL_LOADED else None,
+        "tokenizer_revision": backend.tokenizer_revision if MODEL_LOADED else None,
+        "inference_device": backend.device if MODEL_LOADED else None,
     }
 
 @app.get("/health/liveness")
@@ -144,6 +150,9 @@ class AnalysisResult(BaseModel):
     phrase_count: int
     model_name: str
     model_revision: Optional[str] = None
+    backend_name: Optional[str] = None
+    tokenizer_revision: Optional[str] = None
+    inference_device: Optional[str] = None
     analysis_method: Optional[str] = None
     ollama_active: bool
     sentence_scores: List[SentenceScore]
@@ -176,6 +185,8 @@ def calculate_burstiness(sentence_lengths: List[int]) -> float:
     return float(std / mean)
 
 def score_text_with_transformer(text: str) -> float:
+    if backend.name == "desklib_academic":
+        return backend.score_text(text)
     if not MODEL_LOADED:
         return 0.0
     inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
@@ -231,6 +242,11 @@ def health():
     return {
         "status": "online",
         "model_loaded": MODEL_LOADED,
+        "backend_name": backend.name,
+        "model_name": backend.model_name if MODEL_LOADED else None,
+        "model_revision": backend.model_revision if MODEL_LOADED else None,
+        "tokenizer_revision": backend.tokenizer_revision if MODEL_LOADED else None,
+        "inference_device": backend.device if MODEL_LOADED else None,
         "ollama_active": ollama_ok,
         "ollama_model": OLLAMA_MODEL if ollama_ok else None,
         "active_engine": f"RoBERTa-base Classifier ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
@@ -246,7 +262,10 @@ def analyze(payload: TextPayload):
         raise HTTPException(status_code=400, detail="Text payload cannot be empty.")
 
     ollama_ok = check_ollama_alive()
-    active_model_desc = f"RoBERTa-base Classifier ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
+    if backend.name == "desklib_academic":
+        active_model_desc = f"Desklib Academic Detector ({backend.model_revision})" if MODEL_LOADED else "Unavailable"
+    else:
+        active_model_desc = f"RoBERTa-base Classifier ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
 
 
     if len(raw_text) < MIN_TEXT_LENGTH:
@@ -256,7 +275,10 @@ def analyze(payload: TextPayload):
             predictability_index=0.0,
             phrase_count=0,
             model_name=active_model_desc,
-            model_revision=MODEL_REVISION if MODEL_LOADED else None,
+            model_revision=backend.model_revision if MODEL_LOADED else None,
+            backend_name=backend.name,
+            tokenizer_revision=backend.tokenizer_revision if MODEL_LOADED else None,
+            inference_device=backend.device if MODEL_LOADED else None,
             analysis_method="insufficient_text",
             ollama_active=ollama_ok,
             sentence_scores=[],
@@ -333,7 +355,10 @@ def analyze(payload: TextPayload):
             overall_score = clamped_score
             chunk_scores = [ChunkScore(chunk_index=0, word_count=total_words, ai_score=clamped_score)]
             text_coverage = 100.0
-            method_desc = f"RoBERTa-base Classifier ({MODEL_REVISION})"
+            if backend.name == "desklib_academic":
+                method_desc = f"Desklib Academic Detector ({backend.model_revision})"
+            else:
+                method_desc = f"RoBERTa-base Classifier ({MODEL_REVISION})"
 
         else:
             step = CHUNK_SIZE - CHUNK_OVERLAP
@@ -369,7 +394,7 @@ def analyze(payload: TextPayload):
                 overall_score = 0.0
 
             text_coverage = round((len(words_covered_indices) / total_words) * 100.0, 1) if total_words > 0 else 100.0
-            method_desc = f"RoBERTa-base Classifier ({len(chunk_scores)} Chunks, Weighted Avg)"
+            method_desc = f"{'Desklib Academic Detector' if backend.name == 'desklib_academic' else 'RoBERTa-base Classifier'} ({len(chunk_scores)} Chunks, Weighted Avg)"
     else:
         overall_score = None
         method_desc = "unavailable"
@@ -394,7 +419,10 @@ def analyze(payload: TextPayload):
         predictability_index=predictability_idx,
         phrase_count=phrase_count,
         model_name=active_model_desc,
-        model_revision=MODEL_REVISION if MODEL_LOADED else None,
+        model_revision=backend.model_revision if MODEL_LOADED else None,
+        backend_name=backend.name,
+        tokenizer_revision=backend.tokenizer_revision if MODEL_LOADED else None,
+        inference_device=backend.device if MODEL_LOADED else None,
         analysis_method=method_desc,
         ollama_active=ollama_ok,
         sentence_scores=sentence_scores,
@@ -422,8 +450,22 @@ def export_report_endpoint(analysis: Dict[str, Any]):
     return HTMLResponse(content=html_content, status_code=200)
 
 def main():
-    print("Starting Synthetix AI Detector Engine on http://localhost:8000...")
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import argparse
+    global backend, MODEL_LOADED
+    parser = argparse.ArgumentParser(description="Synthetix AI Detector Engine")
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default=None,
+        help="Model backend to load (hc3_roberta or desklib_academic; default from SYNTETIX_BACKEND env or hc3_roberta)",
+    )
+    parser.add_argument("--port", type=int, default=8000, help="Port to bind (default: 8000)")
+    args = parser.parse_args()
+    if args.backend and args.backend != backend.name:
+        backend = create_backend(args.backend)
+        load_model_artifacts()
+    print(f"Starting Synthetix AI Detector Engine (backend: {backend.name}) on http://localhost:{args.port}...")
+    uvicorn.run(app, host="127.0.0.1", port=args.port)
 
 
 if __name__ == "__main__":

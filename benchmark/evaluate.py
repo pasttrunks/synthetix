@@ -181,6 +181,13 @@ def main():
     parser.add_argument("--threshold", type=float, default=0.5, help="Classification decision threshold (0.0 - 1.0)")
     parser.add_argument("--output-dir", type=str, default="benchmark/reports", help="Directory to save JSON evaluation report")
     parser.add_argument("--dry-run", action="store_true", help="Validate corpus format without making API requests")
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default="hc3_roberta",
+        choices=["hc3_roberta", "desklib_academic"],
+        help="Model backend the API server is running (default: hc3_roberta). Recorded in report metadata.",
+    )
 
     args = parser.parse_args()
 
@@ -189,6 +196,7 @@ def main():
         sys.exit(1)
 
     print(f"Loading corpus from: {args.corpus}")
+    print(f"Expected backend: {args.backend}")
     samples = []
     with open(args.corpus, "r", encoding="utf-8") as f:
         for idx, line in enumerate(f, 1):
@@ -217,6 +225,13 @@ def main():
     abstained_count = 0
     error_count = 0
     model_revision = None
+    backend_meta = {
+        "backend_name": args.backend,
+        "model_name": None,
+        "model_revision": None,
+        "tokenizer_revision": None,
+        "inference_device": None,
+    }
 
     print(f"Evaluating {len(samples)} samples against Synthetix API at {args.api_url}...")
 
@@ -250,6 +265,16 @@ def main():
 
                 if model_revision is None:
                     model_revision = res_data.get("model_revision") or "unknown"
+                    backend_meta["model_name"] = res_data.get("model_name")
+                    backend_meta["model_revision"] = res_data.get("model_revision")
+                    backend_meta["tokenizer_revision"] = res_data.get("tokenizer_revision")
+                    backend_meta["inference_device"] = res_data.get("inference_device")
+                    observed_backend = res_data.get("backend_name")
+                    if observed_backend and observed_backend != args.backend:
+                        print(
+                            f"WARNING: server reports backend '{observed_backend}' but --backend was '{args.backend}'",
+                            file=sys.stderr,
+                        )
 
                 results.append({
                     "sample_index": idx,
@@ -300,9 +325,15 @@ def main():
         "corpus_path": os.path.abspath(args.corpus),
         "corpus_sha256": corpus_sha256,
         "model_info": {
-            "model_name": "Hello-SimpleAI/chatgpt-detector-roberta",
-            "model_revision": model_revision,
-            "tokenizer_revision": model_revision
+            "backend_name": backend_meta["backend_name"],
+            "model_name": (
+                "desklib/ai-text-detector-academic-v1.01"
+                if args.backend == "desklib_academic"
+                else "Hello-SimpleAI/chatgpt-detector-roberta"
+            ),
+            "model_revision": backend_meta["model_revision"] or model_revision,
+            "tokenizer_revision": backend_meta["tokenizer_revision"] or model_revision,
+            "inference_device": backend_meta["inference_device"],
         },
         "total_samples": len(samples),
         "eval_samples": len(valid_results),

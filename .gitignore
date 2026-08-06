@@ -35,6 +35,13 @@ Thumbs.db
 # Scratch directory
 scratch/
 
+# Candidate diagnostic results (not committed until reviewed)
+benchmark/diagnostics/
+
+# Local clean-wheel test environments
+wheel_test_env/
+wheel_test_env*/
+
 # Timestamped benchmark reports
 benchmark/reports/report_[0-9]*.json
 benchmark/ci-reports/report_[0-9]*.json
