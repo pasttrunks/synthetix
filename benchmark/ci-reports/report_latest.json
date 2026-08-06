@@ -1,12 +1,14 @@
 {
-  "timestamp": "2026-08-06T03:33:18.416832+00:00",
-  "git_commit_sha": "552476d46b60283e4bf39ec2fbbd9e70c4a6a5b1",
+  "timestamp": "2026-08-06T19:30:36.806377+00:00",
+  "git_commit_sha": "84bb03e1bfff376eb0ab2e25032fadf2d708ff90",
   "corpus_path": "C:\\Users\\marsh\\Documents\\antigravity\\lucid-newton\\benchmark\\corpus\\test.jsonl",
   "corpus_sha256": "6e3fd89359940c0bcb8380d5585dad4619b5dfb7692238e70d994b1b034758a9",
   "model_info": {
+    "backend_name": "hc3_roberta",
     "model_name": "Hello-SimpleAI/chatgpt-detector-roberta",
     "model_revision": "d2b342c61775d5dd0221808a79983ed3b86ffd86",
-    "tokenizer_revision": "d2b342c61775d5dd0221808a79983ed3b86ffd86"
+    "tokenizer_revision": "d2b342c61775d5dd0221808a79983ed3b86ffd86",
+    "inference_device": "cpu"
   },
   "total_samples": 40,
   "eval_samples": 40,
