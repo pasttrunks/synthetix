@@ -75,6 +75,32 @@ def find_system_python() -> list:
         p = shutil.which(name)
         if p:
             candidates.append([p])
+    # Probe common Windows install locations when nothing is on PATH.
+    roots = [
+        os.environ.get("LOCALAPPDATA", ""),
+        os.environ.get("ProgramFiles", ""),
+        os.environ.get("ProgramFiles(x86)", ""),
+    ]
+    for root in roots:
+        if not root:
+            continue
+        for sub in (
+            "Programs\\Python\\Python313",
+            "Programs\\Python\\Python312",
+            "Programs\\Python\\Python311",
+            "Programs\\Python\\Python310",
+            "Python313",
+            "Python312",
+            "Python311",
+            "Python310",
+            "Python313-32",
+            "Python312-32",
+            "Python311-32",
+            "Python310-32",
+        ):
+            exe = os.path.join(root, sub, "python.exe")
+            if os.path.exists(exe):
+                candidates.append([exe])
     seen = set()
     for cand in candidates:
         key = " ".join(cand)

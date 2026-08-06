@@ -47,6 +47,16 @@ def test_windows_launchers_pass_correct_backend():
     assert "launch_synthetix.py" in balanced
 
 
+def test_windows_launchers_find_python_without_path():
+    """Launchers must fall back to common Python install locations when py/python
+    are not on PATH (the environment that broke the original .cmd files)."""
+    for name in ("Start Synthetix.cmd", "Start Synthetix Fast.cmd", "Start Synthetix Balanced.cmd"):
+        content = (ROOT / name).read_text(encoding="utf-8")
+        assert "%LocalAppData%\\Programs\\Python\\Python312\\python.exe" in content
+        assert 'where py >nul 2>nul' in content
+        assert 'ERROR: Python 3.10 or newer was not found.' in content
+
+
 def test_ui_backend_banner_notices_and_states():
     html = (ROOT / "ai_detector.html").read_text(encoding="utf-8")
     expected = [
