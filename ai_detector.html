@@ -423,6 +423,7 @@
         <div class="panel">
             <div class="panel-header">
                 <span class="panel-title">Inspection Results</span>
+                <button class="btn-sample" id="btnExport" onclick="exportReport()">Export Report</button>
             </div>
 
             <div class="score-hero">
@@ -498,6 +499,7 @@
 
     const textarea = document.getElementById('inputText');
     textarea.addEventListener('input', updateCounts);
+    let lastAnalysis = null;
 
     function updateCounts() {
         const text = textarea.value;
@@ -565,6 +567,7 @@
 
             if (res.ok) {
                 const data = await res.json();
+                lastAnalysis = data;
                 renderResults(data.overall_ai_score, data.burstiness_cv, data.predictability_index, data.phrase_count, data.sentence_scores, data.model_name, data.ollama_active, data.text_coverage, data.analysis_method, data.message);
             } else {
                 throw new Error("HTTP " + res.status);
@@ -574,6 +577,32 @@
             showError("Backend unavailable. Cannot analyze text without the detection server running.");
         } finally {
             btn.textContent = "Analyze Text";
+        }
+    }
+
+    async function exportReport() {
+        const btn = document.getElementById('btnExport');
+        if (!lastAnalysis) {
+            btn.textContent = "Analyze first";
+            setTimeout(() => { btn.textContent = "Export Report"; }, 1500);
+            return;
+        }
+        btn.textContent = "Exporting...";
+        try {
+            const res = await fetch("/api/export-report", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(lastAnalysis)
+            });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const html = await res.text();
+            const blob = new Blob([html], { type: "text/html" });
+            const url = URL.createObjectURL(blob);
+            window.open(url, "_blank");
+        } catch (e) {
+            console.warn("Export failed:", e);
+        } finally {
+            btn.textContent = "Export Report";
         }
     }
 
