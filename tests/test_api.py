@@ -76,7 +76,7 @@ def test_get_health_returns_expected_fields(client):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "online"
-    assert "deberta_loaded" in data
+    assert "model_loaded" in data
     assert "ollama_active" in data
     assert "ollama_model" in data
     assert "active_engine" in data

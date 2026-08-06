@@ -199,7 +199,7 @@ def score_text_with_ollama(text: str) -> Optional[float]:
     try:
         payload = {
             "model": OLLAMA_MODEL,
-            "prompt": f"Analyze this text and rate AI probability from 0 to 100. Output ONLY format {{\\\"score\\\": 85}}.\n\nText: \"{text[:800]}\"",
+            "prompt": f"Analyze this text and rate the AI-writing signal strength from 0 to 100. Output ONLY format {{\\\"score\\\": 85}}.\n\nText: \"{text[:800]}\"",
             "format": "json",
             "stream": False,
             "options": {
@@ -230,7 +230,7 @@ def health():
     ollama_ok = check_ollama_alive()
     return {
         "status": "online",
-        "deberta_loaded": MODEL_LOADED,
+        "model_loaded": MODEL_LOADED,
         "ollama_active": ollama_ok,
         "ollama_model": OLLAMA_MODEL if ollama_ok else None,
         "active_engine": f"RoBERTa-base Classifier ({MODEL_REVISION})" if MODEL_LOADED else "Unavailable"
@@ -263,7 +263,7 @@ def analyze(payload: TextPayload):
             chunk_scores=[],
             text_coverage=None,
             language_warning=None,
-            message=f"Text length ({len(raw_text)} characters) is below the minimum required length of {MIN_TEXT_LENGTH} characters for analysis."
+            message=f"Insufficient text: length ({len(raw_text)} characters) is below the minimum required length of {MIN_TEXT_LENGTH} characters for analysis."
         )
 
     lang_warning = None
@@ -328,8 +328,8 @@ def analyze(payload: TextPayload):
 
     if MODEL_LOADED:
         if total_words <= CHUNK_SIZE:
-            deberta_score = score_text_with_transformer(raw_text)
-            clamped_score = round(max(0.0, min(100.0, deberta_score)), 1)
+            model_score = score_text_with_transformer(raw_text)
+            clamped_score = round(max(0.0, min(100.0, model_score)), 1)
             overall_score = clamped_score
             chunk_scores = [ChunkScore(chunk_index=0, word_count=total_words, ai_score=clamped_score)]
             text_coverage = 100.0
@@ -382,7 +382,7 @@ def analyze(payload: TextPayload):
     span_res = detect_mixed_authorship_spans([s.model_dump() for s in sentence_scores])
 
     signals = {
-        "transformer_probability": overall_score,
+        "transformer_signal": overall_score,
         "lexical_regularity": lexical_res,
         "burstiness_cv": round(cv, 3),
         "predictability_index": predictability_idx

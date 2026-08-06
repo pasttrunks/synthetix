@@ -46,9 +46,9 @@ def generate_html_review_report(analysis: Dict[str, Any]) -> str:
     <div class="card">
         <h1>Synthetix Writing Integrity Evidence Report</h1>
         <div class="meta">Engine: {model_name} | Revision: {model_revision} | Method: {method_desc}</div>
-        <div class="score">AI Probability Score: {score_str}</div>
+        <div class="score">Experimental AI-Writing Signal: {score_str}</div>
         <div class="disclaimer">
-            <strong>Important Review Notice:</strong> This score represents statistical probability estimation from an AI text classification model. Scores must be evaluated as supporting evidence alongside writing process history and source material. Do not use as sole grounds for misconduct actions.
+            <strong>Important Review Notice:</strong> This value is an experimental AI-writing signal from a text classification model, not a probability that the text was AI-written. It requires human review and must be evaluated alongside writing-process history and source material. Do not use it as sole grounds for misconduct actions.
         </div>
     </div>
 

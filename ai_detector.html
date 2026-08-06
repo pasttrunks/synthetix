@@ -402,8 +402,8 @@
             <div class="panel-header">
                 <span class="panel-title">Document Content</span>
                 <div class="sample-actions">
-                    <button class="btn-sample" onclick="loadSample('human')">Human Essay</button>
-                    <button class="btn-sample" onclick="loadSample('ai')">AI Essay</button>
+                    <button class="btn-sample" onclick="loadSample('human')">Sample: Human-style</button>
+                    <button class="btn-sample" onclick="loadSample('ai')">Sample: AI-style</button>
                 </div>
             </div>
 
@@ -428,12 +428,12 @@
             <div class="score-hero">
                 <div class="score-display">
                     <div class="score-number" id="aiScore">0%</div>
-                    <div class="score-meta">Experimental detector score</div>
+                    <div class="score-meta">Experimental AI-writing signal</div>
                 </div>
                 <div class="score-badge badge-human" id="scoreBadge">Not flagged</div>
             </div>
             <div class="score-disclaimer">
-                * Note: This score is an experimental detector score and is not a calibrated probability.
+                * This is an experimental AI-writing signal, not a probability that the text was AI-written. Requires human review.
             </div>
 
             <div class="metrics-stack">
@@ -464,6 +464,16 @@
                     </div>
                     <div class="bar-container">
                         <div class="bar-fill" id="phraseBar"></div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-head">
+                        <span class="metric-title">Text Coverage</span>
+                        <span class="metric-value" id="coverageVal">--</span>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-fill" id="coverageBar"></div>
                     </div>
                 </div>
             </div>
@@ -544,7 +554,7 @@
         if (!text) return;
 
         const btn = document.getElementById('btnAnalyze');
-        btn.textContent = "Analyzing (DeBERTa-v3)...";
+        btn.textContent = "Analyzing...";
 
         try {
             const res = await fetch(API_URL, {
@@ -555,7 +565,7 @@
 
             if (res.ok) {
                 const data = await res.json();
-                renderResults(data.overall_ai_score, data.burstiness_cv, data.predictability_index, data.phrase_count, data.sentence_scores, data.model_name, data.ollama_active);
+                renderResults(data.overall_ai_score, data.burstiness_cv, data.predictability_index, data.phrase_count, data.sentence_scores, data.model_name, data.ollama_active, data.text_coverage, data.analysis_method, data.message);
             } else {
                 throw new Error("HTTP " + res.status);
             }
@@ -567,23 +577,27 @@
         }
     }
 
-    function renderResults(aiScore, burstinessCv, predictabilityIdx, phraseCount, sentences, modelName, ollamaActive) {
+    function renderResults(aiScore, burstinessCv, predictabilityIdx, phraseCount, sentences, modelName, ollamaActive, coverage, analysisMethod, message) {
         const badge = document.getElementById('scoreBadge');
         if (aiScore === null || aiScore === undefined) {
             document.getElementById('aiScore').textContent = 'N/A';
-            badge.textContent = 'Detection unavailable - no model loaded';
+            badge.textContent = analysisMethod === 'insufficient_text' ? 'Insufficient text' : 'Detection unavailable - no model loaded';
             badge.className = 'score-badge badge-neutral';
+            if (analysisMethod === 'insufficient_text' && message) {
+                const map = document.getElementById('inspectorMap');
+                map.innerHTML = '<span style="color: var(--risk-mid); font-weight: 500;">' + message + '</span>';
+            }
         } else if (aiScore > 65) {
             document.getElementById('aiScore').textContent = aiScore + '%';
-            badge.textContent = 'Flagged - review recommended';
+            badge.textContent = 'Strong signal — requires human review';
             badge.className = 'score-badge badge-ai';
         } else if (aiScore >= 35) {
             document.getElementById('aiScore').textContent = aiScore + '%';
-            badge.textContent = 'Inconclusive - insufficient evidence';
+            badge.textContent = 'Moderate signal — requires human review';
             badge.className = 'score-badge badge-inconclusive';
         } else {
             document.getElementById('aiScore').textContent = aiScore + '%';
-            badge.textContent = 'Not flagged';
+            badge.textContent = 'Low signal';
             badge.className = 'score-badge badge-human';
         }
 
@@ -593,7 +607,7 @@
             const statusDot = document.getElementById('statusDot');
             if (ollamaActive || modelName.includes("Ensemble")) {
                 statusDot.style.background = "var(--risk-low)";
-            } else if (modelName.includes("DeBERTa") || modelName.includes("RoBERTa")) {
+            } else if (modelName.includes("RoBERTa")) {
                 statusDot.style.background = "var(--risk-mid)";
             } else {
                 statusDot.style.background = "var(--risk-high)";
@@ -608,6 +622,9 @@
 
         document.getElementById('phraseVal').textContent = phraseCount !== undefined && phraseCount !== null ? phraseCount : 0;
         document.getElementById('phraseBar').style.width = Math.min(100, (phraseCount || 0) * 25) + '%';
+
+        document.getElementById('coverageVal').textContent = coverage !== undefined && coverage !== null ? coverage + '%' : '--';
+        document.getElementById('coverageBar').style.width = Math.min(100, Math.max(0, coverage || 0)) + '%';
 
         const map = document.getElementById('inspectorMap');
         map.innerHTML = '';
