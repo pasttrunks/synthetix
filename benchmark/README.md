@@ -29,7 +29,7 @@ Benchmark datasets must be stored as **JSON Lines (`.jsonl`)** files, where each
   "label": "human|ai",
   "source": "Dataset identifier or origin",
   "domain": "essay|email|code|blog|report|news|other",
-  "model_family": "gpt4|claude|human|llama|gemini|other",
+  "fixture_family": "gpt4_style|claude_style|human_style|llama_style|gemini_style|other",
   "word_count": 150,
   "language": "en"
 }
@@ -39,8 +39,8 @@ Benchmark datasets must be stored as **JSON Lines (`.jsonl`)** files, where each
 
 ## How to Add New Test Data
 
-1. **Collect & Verify Samples:** Gather clean, untruncated text samples from verified human authors and generative AI models.
-2. **Format as JSONL:** Format each sample into a single JSON line with accurate metadata tags (`label`, `domain`, `model_family`, `word_count`).
+1. **Collect & Verify Samples:** Gather clean, untruncated text samples from documented sources with permission, or mark them clearly as synthetic regression fixtures written by project authors.
+2. **Format as JSONL:** Format each sample into a single JSON line with accurate metadata tags (`label`, `domain`, `fixture_family`, `word_count`). Fixtures must be labeled as fixtures, not as genuine provider output.
 3. **Validate Schema:** Run `python benchmark/evaluate.py --corpus benchmark/corpus/your_corpus.jsonl --dry-run` to ensure all entries strictly comply with the schema format.
 4. **Place in Corpus Dir:** Store your file in `benchmark/corpus/`.
 
@@ -74,7 +74,7 @@ The evaluation script generates a timestamped report in `benchmark/reports/repor
 1. **AUROC (Area Under ROC Curve):** Measures overall ranking capability across all thresholds. Target: $\ge 0.85$.
 2. **AUPRC (Area Under Precision-Recall Curve):** Reflects detection quality under class imbalance.
 3. **Brier Score:** Mean squared difference between predicted probabilities and binary labels (lower is better).
-4. **ECE (Expected Calibration Error):** Difference between predicted confidence and actual accuracy across 10 probability bins. Target: $\le 0.05$ (5%).
+4. **ECE (Expected Calibration Error):** Difference between predicted confidence and actual accuracy across 10 confidence bins. Target: $\le 0.05$ (5%).
 5. **TPR at 0.1% FPR / 1.0% FPR:** True Positive Rate at strict False Positive Rate limits. Crucial for avoiding false accusations in academic/professional settings.
 6. **Per-Domain & Per-Model Breakdown:** Pinpoints specific domains (e.g. code) or LLM models (e.g. Claude) where the detector degraded.
 

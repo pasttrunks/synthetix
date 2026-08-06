@@ -243,7 +243,7 @@ def main():
                         "y_prob": y_prob,
                         "raw_score": float(raw_score),
                         "domain": sample.get("domain", "general"),
-                        "model_family": sample.get("model_family", sample.get("source", "unknown")),
+                        "fixture_family": sample.get("fixture_family", sample.get("model_family", sample.get("source", "unknown"))),
                         "source_group_id": sample.get("source_group_id", "default"),
                         "text_snippet": sample["text"][:80]
                     })
@@ -260,7 +260,7 @@ def main():
                     "y_true": y_true,
                     "y_prob": y_prob,
                     "domain": sample.get("domain", "general"),
-                    "model_family": sample.get("model_family", sample.get("source", "unknown")),
+                    "fixture_family": sample.get("fixture_family", sample.get("model_family", sample.get("source", "unknown"))),
                     "raw_api_response": res_data
                 })
             else:
@@ -287,12 +287,12 @@ def main():
         d_sub = [r for r in valid_results if r["domain"] == d]
         per_domain_metrics[d] = compute_metrics([r["y_true"] for r in d_sub], [r["y_prob"] for r in d_sub], threshold=args.threshold)
 
-    # Per-model-family metrics
-    per_model_metrics = {}
-    model_families = set(r["model_family"] for r in valid_results)
-    for mf in sorted(model_families):
-        mf_sub = [r for r in valid_results if r["model_family"] == mf]
-        per_model_metrics[mf] = compute_metrics([r["y_true"] for r in mf_sub], [r["y_prob"] for r in mf_sub], threshold=args.threshold)
+    # Per-fixture-family metrics
+    per_fixture_metrics = {}
+    fixture_families = set(r["fixture_family"] for r in valid_results)
+    for ff in sorted(fixture_families):
+        ff_sub = [r for r in valid_results if r["fixture_family"] == ff]
+        per_fixture_metrics[ff] = compute_metrics([r["y_true"] for r in ff_sub], [r["y_prob"] for r in ff_sub], threshold=args.threshold)
 
     report_data = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -312,7 +312,7 @@ def main():
         "threshold": args.threshold,
         "overall_metrics": overall_metrics,
         "per_domain": per_domain_metrics,
-        "per_model_family": per_model_metrics
+        "per_fixture_family": per_fixture_metrics
     }
 
 

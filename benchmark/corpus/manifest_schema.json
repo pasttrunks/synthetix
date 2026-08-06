@@ -23,10 +23,10 @@
       "enum": ["essay", "email", "code", "blog", "report", "news", "narrative", "technical", "other"],
       "description": "Text format or application domain"
     },
-    "model_family": {
+    "fixture_family": {
       "type": "string",
-      "enum": ["gpt4", "claude", "human", "llama", "gemini", "other"],
-      "description": "Generative model family used to create the text, or 'human'"
+      "enum": ["gpt4_style", "claude_style", "human_style", "llama_style", "gemini_style", "other"],
+      "description": "Style template of the synthetic regression fixture (not genuine provider output)"
     },
     "word_count": {
       "type": "integer",
@@ -39,5 +39,5 @@
       "description": "ISO language code of the text sample"
     }
   },
-  "required": ["text", "label", "source", "domain", "model_family", "word_count", "language"]
+  "required": ["text", "label", "source", "domain", "fixture_family", "word_count", "language"]
 }

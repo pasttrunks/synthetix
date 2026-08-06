@@ -1,6 +1,6 @@
-# Synthetix AI Detector Benchmark Corpus
+# Synthetix AI Detector Regression Fixture Corpus
 
-This directory contains the dataset files, schema definitions, and workflow scripts for constructing, generating, and rebuilding the Synthetix AI Detector benchmark corpus.
+This directory contains a **synthetic regression fixture suite** used to exercise the Synthetix pipeline and release gates. The passages are written by project authors to resemble academic prose. They are **not** genuine output from GPT-4, Claude, Llama, or Gemini, and they are **not** verified human academic sources. Scores on these fixtures do not establish real-world detection performance.
 
 ---
 
@@ -9,73 +9,31 @@ This directory contains the dataset files, schema definitions, and workflow scri
 | File | Description | Count | Sources / Labels |
 |---|---|---|---|
 | `manifest_schema.json` | JSON Schema for validating corpus sample objects | - | Schema Definition |
-| `human_samples.jsonl` | Original human-written text samples (150-500 words) | 20 | Human-authored (`human`) |
-| `ai_samples.jsonl` | Synthetic AI-generated text samples via local Ollama API | 20 | Llama 3 (`ai`) |
-| `train.jsonl` | Training dataset split (60% of merged corpus) | 24 | Shuffled Human + AI |
-| `test.jsonl` | Evaluation & testing dataset split (40% of merged corpus) | 16 | Shuffled Human + AI |
+| `human_samples.jsonl` | Human-style regression fixtures | 50 | `human_style` (`label=0`) |
+| `ai_samples.jsonl` | AI-style regression fixtures | 50 | `gpt4_style`, `claude_style`, `llama_style`, `gemini_style` (`label=1`) |
+| `train.jsonl` | Train split (60% of groups) | 60 | Group-isolated Human + AI-style |
+| `test.jsonl` | Test split (40% of groups) | 40 | Group-isolated Human + AI-style |
 | `sample_corpus.jsonl` | Initial infrastructure validation placeholder corpus | 10 | Placeholder Samples |
 
 ---
 
 ## 2. Text Domains & Balance
 
-The benchmark dataset maintains domain parity between human and synthetic AI samples to prevent topic confounding bias:
+The fixture suite maintains domain parity between human-style and AI-style samples to prevent topic confounding in the regression gate:
 
 - **Academic Essays (`essay`):** History, plant biology, literature critique, political history, quantum physics.
-- **Casual Blog Posts (`blog`):** Home coffee brewing, remote office setup, weekend hiking trips, mindfulness routines.
-- **Business Emails (`email`):** Project timeline updates, Q4 infrastructure budget requests, design system rollout notes.
-- **Personal Narratives (`narrative`):** Childhood memoirs, moving to a new city, car restoration projects.
-- **Technical Documentation (`technical`):** Redis caching patterns, Docker multi-stage builds, PostgreSQL GIN indexing.
-- **News Articles (`news`):** Public transit expansion votes, regional manufacturing supply chains, coastal wind farm energy records.
 
 ---
 
-## 3. Generating AI Text Samples
+## 3. Regenerating the Fixture Suite
 
-AI samples are generated using `benchmark/generate_ai_samples.py`, which communicates directly with a local [Ollama](https://ollama.com/) instance.
-
-### Prerequisites
-Ensure Ollama is running locally:
+Regenerate the human-style and AI-style fixtures deterministically:
 ```bash
-ollama serve
+python -m benchmark.expand_essay_corpus
+python -m benchmark.build_corpus
 ```
 
-### Usage & Arguments
-```bash
-# Generate 20 AI samples using default model (llama3)
-python benchmark/generate_ai_samples.py --model llama3 --count 20 --output benchmark/corpus/ai_samples.jsonl
-
-# Dry-run mode: View prompts and target domain distribution without calling Ollama API
-python benchmark/generate_ai_samples.py --dry-run
-```
-
-### Options
-- `--model`: Ollama model tag (default: `llama3`).
-- `--count`: Number of AI samples to generate (default: `20`).
-- `--output`: File path to save generated JSONL (default: `benchmark/corpus/ai_samples.jsonl`).
-- `--ollama-url`: URL of the local Ollama instance (default: `http://localhost:11434`).
-- `--dry-run`: Display prompt strategy without making API requests.
-
----
-
-## 4. Rebuilding the Benchmark Corpus Splits
-
-Once `human_samples.jsonl` and `ai_samples.jsonl` are present, use `benchmark/build_corpus.py` to merge, shuffle, split, and compute summary metrics.
-
-### Command
-```bash
-python benchmark/build_corpus.py --human benchmark/corpus/human_samples.jsonl --ai benchmark/corpus/ai_samples.jsonl --output-dir benchmark/corpus --train-ratio 0.6 --seed 42
-```
-
-### Process
-1. Loads human and AI JSONL records.
-2. Shuffles the dataset using a fixed random seed (`--seed 42`) for reproducibility.
-3. Splits data into `train.jsonl` (60%) and `test.jsonl` (40%).
-4. Displays formatted summary statistics breaking down label, domain, and model family distribution across splits.
-
----
-
-## 5. Validating & Benchmarking the Corpus
+## 4. Validating & Benchmarking the Corpus
 
 To validate corpus formatting prior to evaluation, run `evaluate.py` in dry-run mode:
 

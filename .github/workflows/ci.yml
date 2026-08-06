@@ -39,7 +39,7 @@ jobs:
         run: |
           python -m venv wheel_test_env
           ./wheel_test_env/bin/pip install dist/*.whl || ./wheel_test_env/Scripts/pip install dist/*.whl
-          ./wheel_test_env/bin/python -c "import synthetix.signals.binoculars; import synthetix.signals.span_detector; import benchmark.adapters.external_adapters; print('Clean wheel package imports succeeded!')" || ./wheel_test_env/Scripts/python -c "import synthetix.signals.binoculars; import synthetix.signals.span_detector; import benchmark.adapters.external_adapters; print('Clean wheel package imports succeeded!')"
+          ./wheel_test_env/bin/python -c "import synthetix.signals.lexical_regularity_heuristic; import synthetix.signals.span_detector; import benchmark.adapters.external_adapters; print('Clean wheel package imports succeeded!')" || ./wheel_test_env/Scripts/python -c "import synthetix.signals.lexical_regularity_heuristic; import synthetix.signals.span_detector; import benchmark.adapters.external_adapters; print('Clean wheel package imports succeeded!')"
 
 
       - name: Validate benchmark corpus schema
@@ -65,4 +65,3 @@ jobs:
             benchmark/ci-reports/predictions.jsonl
           if-no-files-found: error
           retention-days: 30
-

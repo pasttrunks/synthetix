@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-08-06T03:26:27.860117+00:00",
-  "git_commit_sha": "0dd48ac660138a0afdf31a966b4c56cc5702ffd0",
+  "timestamp": "2026-08-06T03:36:14.952745+00:00",
+  "git_commit_sha": "552476d46b60283e4bf39ec2fbbd9e70c4a6a5b1",
   "corpus_path": "C:\\Users\\marsh\\Documents\\antigravity\\lucid-newton\\benchmark\\corpus\\test.jsonl",
-  "corpus_sha256": "ede5d47fdb1619588da00bb6313de8273fff2e619c9f4c287bc86fb062279e90",
+  "corpus_sha256": "6e3fd89359940c0bcb8380d5585dad4619b5dfb7692238e70d994b1b034758a9",
   "model_info": {
     "model_name": "Hello-SimpleAI/chatgpt-detector-roberta",
     "model_revision": "d2b342c61775d5dd0221808a79983ed3b86ffd86",
@@ -32,8 +32,8 @@
         1.0
       ],
       "ece_ci": [
-        0.0149,
-        0.0377
+        0.0148,
+        0.0365
       ]
     },
     "confusion_matrix": {
@@ -390,8 +390,8 @@
       }
     }
   },
-  "per_model_family": {
-    "claude": {
+  "per_fixture_family": {
+    "claude_style": {
       "n_samples": 6,
       "auroc": null,
       "auprc": null,
@@ -425,7 +425,7 @@
         "f1": 1.0
       }
     },
-    "gemini": {
+    "gemini_style": {
       "n_samples": 4,
       "auroc": null,
       "auprc": null,
@@ -459,7 +459,7 @@
         "f1": 1.0
       }
     },
-    "gpt4": {
+    "gpt4_style": {
       "n_samples": 6,
       "auroc": null,
       "auprc": null,
@@ -493,7 +493,7 @@
         "f1": 1.0
       }
     },
-    "human": {
+    "human_style": {
       "n_samples": 20,
       "auroc": null,
       "auprc": null,
@@ -527,7 +527,7 @@
         "f1": 0.0
       }
     },
-    "llama": {
+    "llama_style": {
       "n_samples": 4,
       "auroc": null,
       "auprc": null,

@@ -1,17 +1,17 @@
 import pytest
-from synthetix.signals.binoculars import compute_binoculars_score
+from synthetix.signals.lexical_regularity_heuristic import compute_lexical_regularity_score
 from synthetix.signals.span_detector import detect_mixed_authorship_spans
 
-def test_compute_binoculars_score_short():
-    res = compute_binoculars_score("Too short text")
-    assert res["binoculars_score"] is None
-    assert res["binoculars_flagged"] is False
+def test_compute_lexical_regularity_score_short():
+    res = compute_lexical_regularity_score("Too short text")
+    assert res["lexical_regularity_score"] is None
+    assert res["lexical_regularity_flagged"] is False
 
-def test_compute_binoculars_score_long():
+def test_compute_lexical_regularity_score_long():
     text = "The collapse of the Roman Republic was a prolonged erosion of institutional norms that began decades before Julius Caesar crossed the Rubicon. Client-patron networks transformed into competitive instruments of political warfare."
-    res = compute_binoculars_score(text)
-    assert res["binoculars_score"] is not None
-    assert 0.0 <= res["binoculars_score"] <= 1.0
+    res = compute_lexical_regularity_score(text)
+    assert res["lexical_regularity_score"] is not None
+    assert 0.0 <= res["lexical_regularity_score"] <= 1.0
 
 def test_detect_mixed_authorship_spans_no_shift():
     sentence_scores = [

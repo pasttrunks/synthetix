@@ -57,14 +57,14 @@ def audit_phase_1_evaluation() -> Tuple[bool, List[str]]:
     return len(issues) == 0, issues
 
 def audit_phase_2_model_layer() -> Tuple[bool, List[str]]:
-    """Audit Phase 2: Binoculars signal and span change point detection."""
+    """Audit Phase 2: Lexical regularity heuristic and span change point detection."""
     issues = []
-    from synthetix.signals.binoculars import compute_binoculars_score
+    from synthetix.signals.lexical_regularity_heuristic import compute_lexical_regularity_score
     from synthetix.signals.span_detector import detect_mixed_authorship_spans
 
-    b_res = compute_binoculars_score("The collapse of the Roman Republic was a prolonged erosion of institutional norms.")
-    if "binoculars_score" not in b_res or "binoculars_flagged" not in b_res:
-        issues.append("Binoculars score missing expected keys.")
+    b_res = compute_lexical_regularity_score("The collapse of the Roman Republic was a prolonged erosion of institutional norms.")
+    if "lexical_regularity_score" not in b_res or "lexical_regularity_flagged" not in b_res:
+        issues.append("Lexical regularity score missing expected keys.")
 
     s_res = detect_mixed_authorship_spans([
         {"sentence": "Human sentence.", "ai_score": 10.0},
@@ -125,7 +125,7 @@ def main():
 
     print("=" * 70)
     if all_passed:
-        print("RESULT: ALL PHASES (0-4) VERIFIED SUCCESSFULLY WITH 100% PASSING AUDIT!")
+        print("RESULT: ALL PHASES (0-4) VERIFIED SUCCESSFULLY.")
         sys.exit(0)
     else:
         print("RESULT: AUDIT FAILED. Remediation required.")

@@ -153,18 +153,18 @@ PROMPT_POOL: List[Dict[str, str]] = [
     }
 ]
 
-def derive_model_family(model_name: str) -> str:
+def derive_fixture_template(model_name: str) -> str:
     name_lower = model_name.lower()
     if "gpt" in name_lower:
-        return "gpt4"
+        return "gpt4_style"
     elif "claude" in name_lower:
-        return "claude"
+        return "claude_style"
     elif "llama" in name_lower:
-        return "llama"
+        return "llama_style"
     elif "gemini" in name_lower:
-        return "gemini"
+        return "gemini_style"
     else:
-        return "other"
+        return "other_style"
 
 def resolve_ollama_model(base_url: str, target_model: str) -> str:
     """Fetch tags from Ollama API to match exact model tag (e.g. llama3 -> llama3:latest)."""
@@ -230,10 +230,10 @@ def main():
 
     # Check Ollama connectivity & resolve exact model tag
     actual_model = resolve_ollama_model(args.ollama_url, args.model)
-    model_family = derive_model_family(args.model)
+    fixture_template = derive_fixture_template(args.model)
 
     print(f"Starting AI sample generation via Ollama at {args.ollama_url}...")
-    print(f"Target Model: {actual_model} (Family: {model_family})")
+    print(f"Target Model: {actual_model} (Fixture template: {fixture_template})")
     print(f"Generating {len(prompts_to_run)} samples across domains...\n")
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
@@ -256,7 +256,7 @@ def main():
                 "label": "ai",
                 "source": f"ollama_{args.model}",
                 "domain": domain,
-                "model_family": model_family,
+                "fixture_family": fixture_template,
                 "word_count": word_count,
                 "language": "en"
             }

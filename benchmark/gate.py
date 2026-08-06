@@ -63,14 +63,14 @@ def check_release_gates(
             if sub_negatives > 0 and sub_fpr > max_allowed_subgroup_fpr:
                 subgroup_violations.append((f"domain '{domain}'", sub_fpr))
 
-    # Check model families
-    for mf, mf_m in report.get("per_model_family", {}).items():
-        if mf_m.get("n_samples", 0) > 0:
-            sub_cm = mf_m.get("confusion_matrix", {})
+    # Check fixture families
+    for ff, ff_m in report.get("per_fixture_family", {}).items():
+        if ff_m.get("n_samples", 0) > 0:
+            sub_cm = ff_m.get("confusion_matrix", {})
             sub_fpr = sub_cm.get("fpr", 0.0)
             sub_negatives = sub_cm.get("fp", 0) + sub_cm.get("tn", 0)
             if sub_negatives > 0 and sub_fpr > max_allowed_subgroup_fpr:
-                subgroup_violations.append((f"model_family '{mf}'", sub_fpr))
+                subgroup_violations.append((f"fixture_family '{ff}'", sub_fpr))
 
     gate2_pass = len(subgroup_violations) == 0
     g2_status = "PASS" if gate2_pass else "FAIL"

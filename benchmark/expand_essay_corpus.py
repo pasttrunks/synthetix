@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 Synthetix Expanded Essay Corpus Generator
-Generates 50 distinct authentic Human academic passages and 50 distinct authentic AI model passages
-across 5 academic domains and 4 AI model families (GPT-4, Claude, Llama, Gemini).
-No artificial suffix strings or repeated template loops.
+Generates a synthetic regression fixture suite: 50 human-style passages and 50 AI-style passages
+across 5 academic domains and 4 style templates (gpt4_style, claude_style, llama_style, gemini_style).
+These fixtures are written by project authors to exercise the pipeline. They are NOT genuine
+provider output and are NOT verified academic sources.
 """
 
 import os
@@ -11,7 +12,7 @@ import json
 from typing import List, Dict, Any
 from benchmark.corpus_registry import normalize_sample
 
-# 50 Distinct Authentic Human Academic Passages (5 topics, 10 distinct variations per topic)
+# 50 Distinct Human-Style Regression Passages (5 topics, 10 distinct variations per topic)
 HUMAN_PASSAGES = [
     # Roman Republic Collapse
     ("Roman Republic Collapse", "Constitutional governance in ancient Rome unraveled as military commanders amassed personal armies. Sulla's march on the capital demonstrated that legionary allegiance had shifted from the Senate to individual generals."),
@@ -74,7 +75,7 @@ HUMAN_PASSAGES = [
     ("Epigenetic Inheritance", "Maternal care behaviors in rodents induce persistent epigenomic changes in the offspring hippocampus. High licking and grooming alter glucocorticoid receptor gene promoter methylation, modulating stress reactivity.")
 ]
 
-# AI Prompt & Topic Specifications for synthetic generation across 4 model families
+# AI-style fixture specifications across 4 style templates
 AI_TOPIC_SPECS = [
     # Roman Republic Collapse
     ("Roman Republic Collapse", "gpt4", "In conclusion, artificial intelligence and historical analysis reveal that the collapse of the Roman Republic was a multifaceted process. Furthermore, it is important to note that delving into client-patron networks fosters a seamless understanding of political dynamics. Ultimately, legislative gridlock and partisan violence served as a testament to the crucial role of institutional decay in ancient Rome."),
@@ -165,15 +166,15 @@ def generate_expanded_dataset(count_per_label=50):
             "text": full_text,
             "label": 0,
             "domain": domain_slug,
-            "model_family": "human",
-            "source": "human_academic",
+            "fixture_family": "human_style",
+            "source": "human_style_fixture",
             "source_group_id": source_group_id,
             "word_count": len(full_text.split()),
             "char_count": len(full_text),
             "provenance": {
-                "source_name": "Synthetix Academic Human Corpus v2",
+                "source_name": "Synthetix Human-Style Regression Corpus v2",
                 "dataset_license": "CC-BY-4.0",
-                "author_type": "human"
+                "author_type": "fixture"
             }
         }
         normalized = normalize_sample(raw_sample)
@@ -191,16 +192,16 @@ def generate_expanded_dataset(count_per_label=50):
             "text": full_text,
             "label": 1,
             "domain": domain_slug,
-            "model_family": model_fam,
-            "source": f"{model_fam}_synthetic",
+            "fixture_family": f"{model_fam}_style",
+            "source": f"{model_fam}_style_fixture",
             "source_group_id": source_group_id,
             "word_count": len(full_text.split()),
             "char_count": len(full_text),
             "provenance": {
-                "source_name": f"Synthetix Synthetic {model_fam.upper()} Corpus v2",
+                "source_name": f"Synthetix {model_fam.upper()}-Style Regression Corpus v2",
                 "dataset_license": "CC-BY-4.0",
-                "author_type": "ai",
-                "generator_model": model_fam
+                "author_type": "fixture",
+                "fixture_template": f"{model_fam}_style"
             }
         }
         normalized = normalize_sample(raw_sample)

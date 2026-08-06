@@ -121,7 +121,7 @@ def is_primarily_english(text: str) -> bool:
 class TextPayload(BaseModel):
     text: str
 
-from synthetix.signals.binoculars import compute_binoculars_score
+from synthetix.signals.lexical_regularity_heuristic import compute_lexical_regularity_score
 from synthetix.signals.span_detector import detect_mixed_authorship_spans
 
 class SentenceScore(BaseModel):
@@ -378,12 +378,12 @@ def analyze(payload: TextPayload):
 
 
     # Phase 2: Compute multi-signal ensemble outputs
-    binoculars_res = compute_binoculars_score(raw_text)
+    lexical_res = compute_lexical_regularity_score(raw_text)
     span_res = detect_mixed_authorship_spans([s.model_dump() for s in sentence_scores])
 
     signals = {
         "transformer_probability": overall_score,
-        "binoculars": binoculars_res,
+        "lexical_regularity": lexical_res,
         "burstiness_cv": round(cv, 3),
         "predictability_index": predictability_idx
     }
