@@ -56,4 +56,13 @@ jobs:
           python benchmark/gate.py --report benchmark/ci-reports/report_latest.json --expected-commit-sha $GITHUB_SHA
           kill $SERVER_PID || true
 
+      - name: Upload evaluation report and predictions
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evaluation-artifacts
+          path: |
+            benchmark/ci-reports/report_latest.json
+            benchmark/ci-reports/predictions.jsonl
+          if-no-files-found: error
+          retention-days: 30
 

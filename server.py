@@ -25,7 +25,8 @@ tokenizer = None
 model = None
 AI_LABEL_INDEX = 1
 MODEL_NAME = "Hello-SimpleAI/chatgpt-detector-roberta"
-MODEL_REVISION = "main"
+# Pinned to an immutable Hugging Face commit so inference is reproducible.
+MODEL_REVISION = "d2b342c61775d5dd0221808a79983ed3b86ffd86"
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3:latest"
 MIN_TEXT_LENGTH = 150
@@ -142,6 +143,7 @@ class AnalysisResult(BaseModel):
     predictability_index: float
     phrase_count: int
     model_name: str
+    model_revision: Optional[str] = None
     analysis_method: Optional[str] = None
     ollama_active: bool
     sentence_scores: List[SentenceScore]
@@ -254,6 +256,7 @@ def analyze(payload: TextPayload):
             predictability_index=0.0,
             phrase_count=0,
             model_name=active_model_desc,
+            model_revision=MODEL_REVISION if MODEL_LOADED else None,
             analysis_method="insufficient_text",
             ollama_active=ollama_ok,
             sentence_scores=[],
@@ -391,6 +394,7 @@ def analyze(payload: TextPayload):
         predictability_index=predictability_idx,
         phrase_count=phrase_count,
         model_name=active_model_desc,
+        model_revision=MODEL_REVISION if MODEL_LOADED else None,
         analysis_method=method_desc,
         ollama_active=ollama_ok,
         sentence_scores=sentence_scores,

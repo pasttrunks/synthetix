@@ -213,8 +213,10 @@ def main():
     git_commit_sha = get_git_commit_hash()
 
     results = []
+    predictions = []
     abstained_count = 0
     error_count = 0
+    model_revision = None
 
     print(f"Evaluating {len(samples)} samples against Synthetix API at {args.api_url}...")
 
@@ -234,6 +236,20 @@ def main():
                     y_prob = None
                 else:
                     y_prob = float(raw_score) / 100.0
+                    predictions.append({
+                        "sample_id": sample.get("sample_id", f"sample_{idx}"),
+                        "label": sample.get("label"),
+                        "y_true": y_true,
+                        "y_prob": y_prob,
+                        "raw_score": float(raw_score),
+                        "domain": sample.get("domain", "general"),
+                        "model_family": sample.get("model_family", sample.get("source", "unknown")),
+                        "source_group_id": sample.get("source_group_id", "default"),
+                        "text_snippet": sample["text"][:80]
+                    })
+
+                if model_revision is None:
+                    model_revision = res_data.get("model_revision") or "unknown"
 
                 results.append({
                     "sample_index": idx,
@@ -257,6 +273,7 @@ def main():
 
     print(f"Completed evaluation: {len(valid_results)} analyzed, {abstained_count} abstained, {error_count} errors.")
     print(f"Coverage Rate: {coverage_rate}%")
+    print(f"Model revision: {model_revision}")
 
     y_true_eval = [r["y_true"] for r in valid_results]
     y_prob_eval = [r["y_prob"] for r in valid_results]
@@ -284,8 +301,8 @@ def main():
         "corpus_sha256": corpus_sha256,
         "model_info": {
             "model_name": "Hello-SimpleAI/chatgpt-detector-roberta",
-            "model_revision": "main",
-            "tokenizer_revision": "main"
+            "model_revision": model_revision,
+            "tokenizer_revision": model_revision
         },
         "total_samples": len(samples),
         "eval_samples": len(valid_results),
@@ -304,11 +321,17 @@ def main():
     with open(report_file, "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2)
 
+    predictions_file = os.path.join(args.output_dir, "predictions.jsonl")
+    with open(predictions_file, "w", encoding="utf-8") as f:
+        for p in predictions:
+            f.write(json.dumps(p) + "\n")
+
     timestamp_file = os.path.join(args.output_dir, f"report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json")
     with open(timestamp_file, "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2)
 
     print(f"Evaluation report successfully saved to '{report_file}' and '{timestamp_file}'.")
+    print(f"Per-sample predictions saved to '{predictions_file}'.")
 
 if __name__ == "__main__":
     main()

@@ -11,6 +11,7 @@ def generate_html_review_report(analysis: Dict[str, Any]) -> str:
     else:
         score_str = "N/A (Uncertain)"
     model_name = html.escape(str(analysis.get("model_name", "Unknown Model")))
+    model_revision = html.escape(str(analysis.get("model_revision") or "unknown"))
     method_desc = html.escape(str(analysis.get("analysis_method", "Standard Evaluation")))
 
 
@@ -44,7 +45,7 @@ def generate_html_review_report(analysis: Dict[str, Any]) -> str:
 <body>
     <div class="card">
         <h1>Synthetix Writing Integrity Evidence Report</h1>
-        <div class="meta">Engine: {model_name} | Method: {method_desc}</div>
+        <div class="meta">Engine: {model_name} | Revision: {model_revision} | Method: {method_desc}</div>
         <div class="score">AI Probability Score: {score_str}</div>
         <div class="disclaimer">
             <strong>Important Review Notice:</strong> This score represents statistical probability estimation from an AI text classification model. Scores must be evaluated as supporting evidence alongside writing process history and source material. Do not use as sole grounds for misconduct actions.
