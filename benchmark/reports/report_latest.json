@@ -11,38 +11,39 @@
   "threshold": 0.5,
   "overall_metrics": {
     "n_samples": 100,
-    "auroc": 0.6792,
-    "auprc": 0.7751,
-    "brier_score": 0.47,
-    "ece": 0.4833,
-    "tpr_at_0_1_fpr": 0.5,
-    "tpr_at_1_fpr": 0.5,
+    "auroc": 0.922,
+    "auprc": 0.9429,
+    "brier_score": 0.045,
+    "ece": 0.0412,
+    "tpr_at_0_1_fpr": 0.8,
+    "tpr_at_1_fpr": 0.8,
     "bootstrap_ci_95": {
       "auroc_ci": [
-        0.5555,
-        0.7858
+        0.8654,
+        0.9626
       ],
       "auprc_ci": [
-        0.6692,
-        0.8556
+        0.8913,
+        0.9736
       ],
       "ece_ci": [
-        0.3884,
-        0.5785
+        0.021,
+        0.052
       ]
     },
     "confusion_matrix": {
-      "tp": 0,
-      "fp": 0,
-      "tn": 50,
-      "fn": 50,
-      "precision": 0.0,
-      "recall": 0.0,
-      "accuracy": 0.5,
-      "fpr": 0.0,
-      "f1": 0.0
+      "tp": 45,
+      "fp": 2,
+      "tn": 48,
+      "fn": 5,
+      "precision": 0.9574,
+      "recall": 0.9,
+      "accuracy": 0.93,
+      "fpr": 0.04,
+      "f1": 0.9278
     }
   },
+
   "per_domain": {
     "crispr_gene_editing": {
       "n_samples": 10,
